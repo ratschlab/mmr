@@ -1,0 +1,82 @@
+main
+(parse_complete?)
+    parse_complete_file
+        open_bam_pipe_in
+        parse_header
+        get_alignment
+    pre_filter_alignment_map
+        filter_alignments
+    (iterate over read_map_left)
+        update_coverage_map
+            parse_cigar
+    (iterate over read_map_right)
+        update_coverage_map
+            parse_cigar
+    get_active_read_set
+        get_alignment_end
+        update_coverage_map
+    get_total_min_loss
+        get_coverage
+            parse_cigar
+        get_variance
+            intron_penalty
+    (iterate over iterations)
+        smooth_coverage_map_paired
+            compare_pair
+                get_coverage
+                    parse_cigar
+                alter_coverage
+                get_variance
+                    intron_penalty
+            update_coverage_map
+                parse_cigar
+        smooth_coverage_map_single
+            compare_single
+                get_coverage
+                    parse_cigar
+                alter_coverage
+                get_variance
+                    intron_penalty
+            update_coverage_map
+                parse_cigar
+        get_total_min_loss
+            get_coverage
+                parse_cigar
+            get_variance
+                intron_penalty
+    write_output
+        open_bam_pipe_out
+(not parse complete?)
+    (iterate over iterations)
+        (threaded)
+            pthread_create
+        open_bam_pipe_in
+        (first it?)
+            parse_header
+        (unthreaded)
+            process_data_online
+                filter_alignments
+                get_active_reads 
+                    get_alignment_end
+                    update_coverage_map
+                        parse_cigar
+                compare_pair
+                    get_coverage
+                        parse_cigar
+                    alter_coverage
+                    get_variance
+                        intron_penalty
+                update_coverage_map
+                compare_single
+                    get_coverage
+                        parse_cigar
+                    alter_coverage
+                    get_variance
+                        intron_penalty
+                update_coverage_map
+        (threaded)
+            fifo.push
+    (threaded)
+        pthread_join
+    write_output_direct
+        open_bam_pipe_out
