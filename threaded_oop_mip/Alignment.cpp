@@ -149,7 +149,7 @@ vector< pair<unsigned long, unsigned int> > Alignment::get_intron_coords() {
     vector< pair<unsigned long, unsigned int> > coords;
     unsigned long intron_start = this->start;
 
-    for (size_t i = 0; i <= this->operations.size(); i++) {
+    for (size_t i = 0; i < this->operations.size(); i++) {
         if (this->operations.at(i) == 'M' || this->operations.at(i) == 'D') {
             intron_start += sizes.at(i);
         } else if (this->operations.at(i) == 'N') {
@@ -164,7 +164,7 @@ void Alignment::get_blocks(vector<pair<unsigned long, unsigned long> > &blocks) 
     unsigned long curr_pos = this->start;
     unsigned long last_pos = this->start;
 
-    for (size_t i = 0; i <= this->operations.size(); i++) {
+    for (size_t i = 0; i < this->operations.size(); i++) {
         if (this->operations.at(i) == 'M' || this->operations.at(i) == 'D') {
             curr_pos += sizes.at(i);
         } else if (this->operations.at(i) == 'N') {
@@ -180,9 +180,9 @@ set<unsigned long> Alignment::get_overlap(Alignment &other) {
     set<unsigned long> overlap;
 
     unsigned long genome_pos = this->start;
-    for (size_t i = 0; i <= this->operations.size(); i++) {
+    for (size_t i = 0; i < this->operations.size(); i++) {
         if (this->operations.at(i) == 'M') {
-            for  (int j = 0; j <= this->sizes.at(i); j++) {
+            for  (int j = 0; j < this->sizes.at(i); j++) {
                 local_pos.insert(genome_pos++);
             }
         } else if (this->operations.at(i) == 'D' || this->operations.at(i) == 'N') {
@@ -191,14 +191,14 @@ set<unsigned long> Alignment::get_overlap(Alignment &other) {
     }
 
     genome_pos = other.start;
-    for (size_t i = 0; i <= other.operations.size(); i++) {
+    for (size_t i = 0; i < other.operations.size(); i++) {
         if (other.operations.at(i) == 'M') {
-            for  (int j = 0; j <= other.sizes.at(i); j++) {
+            for  (int j = 0; j < other.sizes.at(i); j++) {
                 if (local_pos.find(genome_pos) != local_pos.end())
                     overlap.insert(genome_pos++);
             }
         } else if (other.operations.at(i) == 'D' || other.operations.at(i) == 'N') {
-            genome_pos += this->sizes.at(i);
+            genome_pos += other.sizes.at(i);
         }
     }
     return overlap;

@@ -48,8 +48,10 @@ Config::Config(int argc, char *argv[]) {
             exit(0);
         } else if (!strcmp(argv[i], "-o")) {
             outfile = std::string(argv[++i]);
-        } else if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "--segments")) {
-            segments = std::string(argv[++i]);
+        } else if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "--segmentfile")) {
+            segmentfile = std::string(argv[++i]);
+        } else if (!strcmp(argv[i], "-l") || !strcmp(argv[i], "_-lossfile")) {
+            lossfile = std::string(argv[++i]);
         } else {
             if (argv[i][0] == '-') {
                 fprintf(stderr, "\nERROR: Unknown option %s\n", argv[i]);
@@ -76,11 +78,12 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-F --filter-dist [INT]\tfilter distance F for pre-filter [3]\n");
     fprintf(stderr, "\t-f --pre-filter \tpre filter all alignments that have F more edit ops than the best [off]\n");
     fprintf(stderr, "\t-m --mip-objective \tuse objective from MIP instead of local variance [off]\n");
-    fprintf(stderr, "\t-s --segments \tsegment file required for mip optimization []\n");
+    fprintf(stderr, "\t-s --segmentfile \tsegment file required for mip optimization []\n");
+    fprintf(stderr, "\t-l --lossfile \t\tloss parameter file required for mip optimization []\n");
     fprintf(stderr, "\t-P --parse-complete \tparse complete file into memory [off]\n");
     fprintf(stderr, "\t-p --pair-usage \tpre use pair information in the reads [off]\n");
     fprintf(stderr, "\t-i --insert-size \testimted insert size for paired end reads [200]\n");
-    fprintf(stderr, "\t-t --threads \tnumber of threads to use (must be > 2) [1]\n");
+    fprintf(stderr, "\t-t --threads \t\tnumber of threads to use (must be > 2) [1]\n");
     fprintf(stderr, "\t-d --insert-dev \tallowed deviation from insert size (times insert size) [0.4]\n");
     fprintf(stderr, "\t-b --best-only \t\tprint only best alignment [off]\n");
     fprintf(stderr, "\t-V --use-variants \t\tuse variant alignments (different edit op count,\n");
@@ -107,6 +110,7 @@ void Config::init() {
     num_threads = 1;
     max_fifo_size = 1000;
     use_variants = false;
-    segments = string();
+    segmentfile = string();
+    lossfile = string();
 }
 

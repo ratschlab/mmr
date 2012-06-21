@@ -5,9 +5,10 @@
 #include "Utils.h"
 
 extern GeneralData* genData;
+extern Config* conf;
 
-void Segments::get_from_file(string & filename) {
-    FILE* infile = fopen(filename.c_str(), "r");
+void Segments::get_from_file() {
+    FILE* infile = fopen(conf->segmentfile.c_str(), "r");
     char* ret;
     char line[1000];
 
@@ -23,7 +24,6 @@ void Segments::get_from_file(string & filename) {
 
     char* sl = strtok(line, "\t");
 
-    // TODO More code here
     int idx = 0;
     long segment_id = 0;
     long intron_id = 0;

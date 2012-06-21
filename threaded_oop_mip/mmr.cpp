@@ -289,6 +289,9 @@ int main(int argc, char *argv[]) {
         // an alignment is active if it is currently the used alignment of a read
         data->get_active_read_set(genData);
 
+        if (conf->use_mip_objective)
+            prepare_mip_objective();
+
         if (conf->verbose) { 
             sum_min_loss = data->get_total_min_loss();
             fprintf(stdout, "\nObjective before smoothing:\n\tchanged single (paired):  %i/%i (%i/%i)\n\tobjective: %lf\n", num_changed_single, num_ambiguous_single, num_changed_paired, num_ambiguous_paired, sum_min_loss); 
@@ -388,6 +391,10 @@ int main(int argc, char *argv[]) {
                     fprintf(stderr, "No header found in %s.\n", conf->infile.c_str());
                     exit(1);
                 }
+
+                // check, if we need to prepare the mip objective
+                if (conf->use_mip_objective)
+                    prepare_mip_objective();
             
             } else {
                 while (line[0] == '@') {

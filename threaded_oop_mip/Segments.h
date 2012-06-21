@@ -30,7 +30,7 @@ public:
     Segments() {};
     ~Segments() {};
 
-    void get_from_file(string &filename);
+    void get_from_file();
 
     pair<double, double> get_exon_segment_loss(vector<Alignment>::iterator alignment, set<unsigned long> overlap_region, bool is_best);
     pair<double, double> get_intron_segment_loss(vector<Alignment>::iterator alignment);
