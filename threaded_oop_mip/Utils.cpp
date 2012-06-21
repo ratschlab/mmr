@@ -331,9 +331,9 @@ set<vector<Alignment>::iterator> filter_alignments(vector<Alignment> &aligns) {
     return to_erase;
 }
 
-void get_plifs_from_file(string &filename) {
+void get_plifs_from_file() {
     
-    FILE* infile = fopen(filename.c_str(), "r");    
+    FILE* infile = fopen(conf->lossfile.c_str(), "r");    
     char* ret;
     char line[1000];
     int i_count;
@@ -395,3 +395,25 @@ double compute_loss(double observed_cov, double predicted_cov) {
     return loss;
 }
 
+void prepare_mip_objective() {
+
+        if (conf->segmentfile.size() == 0) {
+            fprintf(stderr, "For using the mip objective, you need to specify a segments file via -s/--segmentfile. Bailing out!\n");
+            exit(-1);
+        } else {
+            if (conf->verbose) fprintf(stdout, "Parsing segments from %s ...\n", conf->segmentfile.c_str());
+            genData->segments.get_from_file(); 
+            if (conf->verbose) fprintf(stdout, "... done.\n\n");
+        }
+
+       // fprintf(stdout, "chr_size:%i\tchr_num:%i\tcov_map:%i\n", genData->chr_num.size(), genData->chr_num.size(), genData->coverage_map.size());
+
+        if (conf->lossfile.size() == 0) {
+            fprintf(stderr, "For using the mip objective, you need to specify a loss function parameter file via -l/--lossfile. Bailing out!\n");
+            exit(-1);
+        } else {
+            if (conf->verbose) fprintf(stdout, "Parsing loss function parameters from %s ...\n", conf->lossfile.c_str());
+            get_plifs_from_file();
+            if (conf->verbose) fprintf(stdout, "... done.\n\n");
+        }
+}

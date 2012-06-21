@@ -37,9 +37,10 @@ bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::it
 
 set<vector<Alignment>::iterator> filter_alignments(vector<Alignment> &aligns);
 
-void  get_plifs_from_file(string &filename);
+void  get_plifs_from_file();
 
 double compute_loss(double observed_cov, double predicted_cov);
 
-void get_segments_from_file(string &filename);
+void prepare_mip_objective();
+
 #endif
