@@ -3,6 +3,7 @@
 #include <vector>
 #include <set>
 #include <cmath>
+#include <algorithm>
 
 #include "Alignment.h"
 #include "GeneralData.h"
@@ -167,6 +168,8 @@ void parse_header(char* sl) {
 bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, vector<Alignment>::iterator best_left, vector<Alignment>::iterator best_right) {
 
     bool used_mip = false;
+    double candidate_loss = 0.0;
+    double best_loss = 0.0;
 
     // check how objective is to be computed
     // we need segments overlapping at least one of the two candidates
@@ -180,32 +183,41 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
         set<unsigned long> overlap_cr_br = candidate_right->get_overlap(*best_right); 
 
         // loss candidate_left
-        set_union(overlap_cl_bl.begin(), overlap_cl_bl.end(), overlap_cl_br.begin(), overlap_cl_br.end(), overlap.begin());
-        pair<float, float> loss_cl = genData->segments.get_exon_segment_loss(candidate_left, overlap, false);
+        set_union(overlap_cl_bl.begin(), overlap_cl_bl.end(), overlap_cl_br.begin(), overlap_cl_br.end(), inserter(overlap, overlap.begin()));
+        pair<double, double> loss_cl = genData->segments.get_exon_segment_loss(candidate_left, overlap, false);
         overlap.clear();
 
         // loss candidate_rigth
-        set_union(overlap_cr_bl.begin(), overlap_cr_bl.end(), overlap_cr_br.begin(), overlap_cr_br.end(), overlap.begin());
-        pair<float, float> loss_cr = genData->segments.get_exon_segment_loss(candidate_right, overlap, false);
+        set_union(overlap_cr_bl.begin(), overlap_cr_bl.end(), overlap_cr_br.begin(), overlap_cr_br.end(), inserter(overlap, overlap.begin()));
+        pair<double, double> loss_cr = genData->segments.get_exon_segment_loss(candidate_right, overlap, false);
         overlap.clear();
 
         // loss best_left
-        set_union(overlap_cr_bl.begin(), overlap_cr_bl.end(), overlap_cl_bl.begin(), overlap_cl_bl.end(), overlap.begin());
-        pair<float, float> loss_bl = genData->segments.get_exon_segment_loss(best_left, overlap, true);
+        set_union(overlap_cr_bl.begin(), overlap_cr_bl.end(), overlap_cl_bl.begin(), overlap_cl_bl.end(), inserter(overlap, overlap.begin()));
+        pair<double, double> loss_bl = genData->segments.get_exon_segment_loss(best_left, overlap, true);
         overlap.clear();
 
         // loss best_right
-        set_union(overlap_cr_br.begin(), overlap_cr_br.end(), overlap_cl_br.begin(), overlap_cl_br.end(), overlap.begin());
-        pair<float, float> loss_br = genData->segments.get_exon_segment_loss(best_right, overlap, true);
+        set_union(overlap_cr_br.begin(), overlap_cr_br.end(), overlap_cl_br.begin(), overlap_cl_br.end(), inserter(overlap, overlap.begin()));
+        pair<double, double> loss_br = genData->segments.get_exon_segment_loss(best_right, overlap, true);
         overlap.clear();
 
         // check if any loss is valid
+        // first is loss_with and second is loss_without
         if (loss_cl.first >= 0.0 || loss_cr.first >= 0.0 || loss_br.first >= 0.0 || loss_bl.first >= 0.0) {
-            
+            candidate_loss +=  (loss_cl.first >= 0.0) ? loss_cl.first : 0;
+            candidate_loss +=  (loss_cr.first >= 0.0) ? loss_cl.first : 0;
+            candidate_loss +=  (loss_bl.second >= 0.0) ? loss_bl.second : 0;
+            candidate_loss +=  (loss_br.second >= 0.0) ? loss_br.second : 0;
+            best_loss +=  (loss_cl.second >= 0.0) ? loss_cl.second : 0;
+            best_loss +=  (loss_cr.second >= 0.0) ? loss_cl.second : 0;
+            best_loss +=  (loss_bl.first >= 0.0) ? loss_bl.first : 0;
+            best_loss +=  (loss_br.first >= 0.0) ? loss_br.first : 0;
+            used_mip = true;
         }
     }
 
-    if (! conf->use_mip || ! used_mip) {
+    if (! conf->use_mip_objective || ! used_mip) {
         vector<unsigned short> intron_cov_candidate_left;
         vector<unsigned short> intron_cov_candidate_right;
         vector<unsigned short> intron_cov_best_left;
@@ -237,8 +249,10 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
         double var_best_right_without = get_variance(exon_cov_best_right_without, empty_cov);
         double var_best_right_with = get_variance(exon_cov_best_right_with, intron_cov_best_right);
 
-        return (var_cand_left_with + var_cand_right_with + var_best_left_without + var_best_right_without) < (var_cand_left_without + var_cand_right_without + var_best_left_with + var_best_right_with);
+        best_loss = var_cand_left_without + var_cand_right_without + var_best_left_with + var_best_right_with;
+        candidate_loss = var_cand_left_with + var_cand_right_with + var_best_left_without + var_best_right_without;
     }
+    return candidate_loss < best_loss;
 }
 
 bool compare_pair_mip(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, vector<Alignment>::iterator best_left, vector<Alignment>::iterator best_right) {
@@ -322,10 +336,10 @@ void get_plifs_from_file(string &filename) {
     FILE* infile = fopen(filename.c_str(), "r");    
     char* ret;
     char line[1000];
-    float c, sl1, sl2, sr1, sr2;
     int i_count;
+    double c, sl1, sl2, sr1, sr2;
 
-    map< float, vector<float> > plifs;
+    map< double, vector<double> > plifs;
 
     while (true) {
         ret = fgets(line, sizeof(line), infile);
@@ -343,26 +357,26 @@ void get_plifs_from_file(string &filename) {
             exit(1);
         }
 
-        vector<float> tmp_plif;
+        vector<double> tmp_plif;
         tmp_plif.push_back(sl1);
         tmp_plif.push_back(sl2);
         tmp_plif.push_back(sr1);
         tmp_plif.push_back(sr2);
-        plifs.insert(plifs.begin(), pair<float, vector<float> >(c, tmp_plif));
+        plifs.insert(plifs.begin(), pair<double, vector<double> >(c, tmp_plif));
     }
 
     genData->plifs = plifs;
     
 }
 
-float compute_loss(float observed_cov, float predicted_cov, map< float, vector<float> > plifs) {
+double compute_loss(double observed_cov, double predicted_cov) {
     
     // get plif iterators to interpolate entries
-    map< float, vector<float> >::iterator lower = genData->plifs.upper_bound(observed_cov);
+    map< double, vector<double> >::iterator lower = genData->plifs.upper_bound(observed_cov);
     lower--;
-    map< float, vector<float> >::iterator upper = genData->plifs.upper_bound(observed_cov);
+    map< double, vector<double> >::iterator upper = genData->plifs.upper_bound(observed_cov);
 
-    float loss = 0.0;
+    double loss = 0.0;
 
     if (observed_cov < 0)
         observed_cov = 0;

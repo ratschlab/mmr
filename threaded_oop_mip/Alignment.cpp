@@ -118,9 +118,9 @@ void Alignment::update_coverage_map(bool positive) {
     pthread_mutex_unlock(&mutex_coverage);
 }
 
-unsigned int Alignment::get_end() {
+unsigned long Alignment::get_end() {
     
-    unsigned int end = this->start;
+    unsigned long end = this->start;
     for (size_t i = 0; i < this->sizes.size(); i++) {
         if (this->operations.at(i) == 'N' || this->operations.at(i) == 'D' || this->operations.at(i) == 'M') {
             end += this->sizes.at(i);

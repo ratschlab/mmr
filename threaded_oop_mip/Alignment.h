@@ -3,8 +3,8 @@
 
 #include <cstring>
 #include <string>
+#include <vector>
 #include <set>
-#include "GeneralData.h"
 
 using namespace std;
 
@@ -34,7 +34,7 @@ public:
 
     void get_coverage(unsigned int window_size, vector<unsigned short> &intron_cov, vector<unsigned short> &exon_cov);
     void update_coverage_map(bool positive);
-    unsigned int get_end();
+    unsigned long get_end();
     
     bool comparator(const Alignment &left, const Alignment &right); 
 

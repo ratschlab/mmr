@@ -48,6 +48,8 @@ Config::Config(int argc, char *argv[]) {
             exit(0);
         } else if (!strcmp(argv[i], "-o")) {
             outfile = std::string(argv[++i]);
+        } else if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "--segments")) {
+            segments = std::string(argv[++i]);
         } else {
             if (argv[i][0] == '-') {
                 fprintf(stderr, "\nERROR: Unknown option %s\n", argv[i]);
@@ -74,6 +76,7 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-F --filter-dist [INT]\tfilter distance F for pre-filter [3]\n");
     fprintf(stderr, "\t-f --pre-filter \tpre filter all alignments that have F more edit ops than the best [off]\n");
     fprintf(stderr, "\t-m --mip-objective \tuse objective from MIP instead of local variance [off]\n");
+    fprintf(stderr, "\t-s --segments \tsegment file required for mip optimization []\n");
     fprintf(stderr, "\t-P --parse-complete \tparse complete file into memory [off]\n");
     fprintf(stderr, "\t-p --pair-usage \tpre use pair information in the reads [off]\n");
     fprintf(stderr, "\t-i --insert-size \testimted insert size for paired end reads [200]\n");
@@ -104,5 +107,6 @@ void Config::init() {
     num_threads = 1;
     max_fifo_size = 1000;
     use_variants = false;
+    segments = string();
 }
 

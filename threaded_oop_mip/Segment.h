@@ -9,18 +9,19 @@ class Segment {
 
     unsigned long start;
     unsigned int length;
+    unsigned int chr;
     float expectation;
 
-    Segment(const unsigned long a, const unsigned int b, const float c) :
-        start(a), length(b), expectation(c) {}
+    Segment(const unsigned long a, const unsigned int b, const unsigned int c, const float d) :
+        start(a), length(b), chr(c), expectation(d) {}
 
     Segment():
-        start(0), length(0), expectation(0.0) {}
+        start(0), length(0), chr(1), expectation(0.0) {}
 
     ~Segment() {};
     
     bool operator==(const Segment &other) {
-        return (start == other.start && length == other.length);
+        return (start == other.start && length == other.length && chr == other.chr);
     };
 
 };

@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "Segments.h"
+
 using namespace std;
 
 struct GeneralData {
@@ -20,7 +22,10 @@ struct GeneralData {
     unordered_map <string, size_t, hash<string> > best_right;
 
     // plifs to compute loss in case of mip objective
-    map< float, vector<float> > plifs;
+    map< double, vector<double> > plifs;
+
+    // data structure containing segment graph information
+    Segments segments;
 
 };
 #endif

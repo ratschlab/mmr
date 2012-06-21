@@ -33,6 +33,7 @@ class Config {
 
         string infile;
         string outfile;
+        string segments;
 
         double insert_size;
         double insert_dev;

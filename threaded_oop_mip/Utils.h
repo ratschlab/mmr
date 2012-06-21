@@ -39,7 +39,7 @@ set<vector<Alignment>::iterator> filter_alignments(vector<Alignment> &aligns);
 
 void  get_plifs_from_file(string &filename);
 
-float compute_loss(float observed_cov, float predicted_cov);
+double compute_loss(double observed_cov, double predicted_cov);
 
 void get_segments_from_file(string &filename);
 #endif
