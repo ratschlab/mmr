@@ -34,6 +34,7 @@ pthread_mutex_t mutex_fifo;
 pthread_mutex_t mutex_done;
 pthread_mutex_t mutex_best_left;
 pthread_mutex_t mutex_best_right;
+pthread_mutex_t mutex_counter;
 
 pthread_cond_t fifo_is_full;
 pthread_attr_t attr;
@@ -403,6 +404,9 @@ int main(int argc, char *argv[]) {
                 strcpy(last_line, line);
             }
 
+            genData->total_loss = 0.0;
+            genData->num_altered = 0;
+
             string last_id = string("");
             // fill FIFO
             while ((ret = data->parse_file(infile, last_line, genData, counter)) || data->left_reads.size() > 0 || data->right_reads.size() > 0) {
@@ -435,13 +439,22 @@ int main(int argc, char *argv[]) {
                 delete[] threads;
             }
 
-            if (conf->verbose) 
+            if (conf->verbose) { 
                 fprintf(stdout, "\nsuccessfully parsed %i lines\n", counter - 1);
-
+                fprintf(stdout, "changed %i alignments\n", genData->num_altered);
+                fprintf(stdout, "total objective: %f\n", (float) genData->total_loss);
+            }
         }
 
         write_output_direct();
-
+        /*map <int, vector<unsigned short> >::iterator it = genData->coverage_map.begin();
+        for (it; it != genData->coverage_map.end(); it++) {
+            fprintf(stdout, "cov vec:\n");
+            for (vector<unsigned short>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++) {
+                fprintf(stdout, "%i ", (*it2));
+            }
+            fprintf(stdout, "\n");
+        }*/
     }
 
     delete conf;

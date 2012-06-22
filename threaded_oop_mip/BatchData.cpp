@@ -298,6 +298,7 @@ unsigned int BatchData::smooth_coverage_map_single_wrapper(list<unordered_map <s
 
         unsigned int num_changed = 0;
         unsigned int num_best = 0;
+        double loss = 0.0;
 
         list<unordered_map<string, vector<Alignment> >::iterator>::iterator r_idx;
         for (r_idx = active_reads.begin(); r_idx != active_reads.end(); r_idx++) {
@@ -322,7 +323,7 @@ unsigned int BatchData::smooth_coverage_map_single_wrapper(list<unordered_map <s
                     continue;
 
                 // check if v_idx < curr_best
-                if (compare_single(v_idx, curr_best)) {
+                if (compare_single(v_idx, curr_best, loss)) {
                     changed = true;
                     curr_best->is_best = false;
                     curr_best->update_coverage_map(0);
@@ -347,6 +348,7 @@ unsigned int BatchData::smooth_coverage_map_paired(GeneralData* genData, unsigne
 
         unsigned int num_changed = 0;
         //unsigned int num_best = 0;
+        double loss = 0.0;
 
         unordered_map<string, vector<vector<Alignment>::iterator> >::iterator l_idx;
         unordered_map<string, vector<vector<Alignment>::iterator> >::iterator r_idx;
@@ -390,7 +392,7 @@ unsigned int BatchData::smooth_coverage_map_paired(GeneralData* genData, unsigne
             for(lv_idx = l_idx->second.begin(), rv_idx = r_idx->second.begin(); lv_idx < l_idx->second.end() && rv_idx  < r_idx->second.end(); lv_idx++, rv_idx++) {
                 if ((*lv_idx)  == best_left_idx && (*rv_idx) == best_right_idx)
                     continue;
-                if (compare_pair(*lv_idx, *rv_idx, best_left_idx, best_right_idx)) {
+                if (compare_pair(*lv_idx, *rv_idx, best_left_idx, best_right_idx, loss)) {
                     changed = true;
                     best_left_idx->is_best = false;
                     best_right_idx->is_best = false;

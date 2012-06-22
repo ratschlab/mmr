@@ -165,7 +165,7 @@ void parse_header(char* sl) {
     }
 }
 
-bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, vector<Alignment>::iterator best_left, vector<Alignment>::iterator best_right) {
+bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, vector<Alignment>::iterator best_left, vector<Alignment>::iterator best_right, double &loss) {
 
     bool used_mip = false;
     double candidate_loss = 0.0;
@@ -217,6 +217,9 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
         }
     }
 
+    // if we never were supposed to use the mip objective or did not use it
+    // for other reasons, use the variance objective instead, but do not add it
+    // to the total loss for mip-objective
     if (! conf->use_mip_objective || ! used_mip) {
         vector<unsigned short> intron_cov_candidate_left;
         vector<unsigned short> intron_cov_candidate_right;
@@ -252,64 +255,77 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
         best_loss = var_cand_left_without + var_cand_right_without + var_best_left_with + var_best_right_with;
         candidate_loss = var_cand_left_with + var_cand_right_with + var_best_left_without + var_best_right_without;
     }
-    return candidate_loss < best_loss;
+    if (conf->use_mip_objective && ! used_mip) {
+        loss = -1.0;
+    } else {
+        loss = min(candidate_loss, best_loss);
+    }
+    return (candidate_loss < best_loss);
 }
 
-bool compare_pair_mip(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, vector<Alignment>::iterator best_left, vector<Alignment>::iterator best_right) {
+bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::iterator best, double &loss) {
 
-    vector<unsigned short> intron_cov_candidate_left;
-    vector<unsigned short> intron_cov_candidate_right;
-    vector<unsigned short> intron_cov_best_left;
-    vector<unsigned short> intron_cov_best_right;
+    bool used_mip = false;
+    double candidate_loss = 0.0;
+    double best_loss = 0.0;
 
-    vector<unsigned short> exon_cov_candidate_left_without;
-    candidate_left->get_coverage(conf->window_size, exon_cov_candidate_left_without, intron_cov_candidate_left);
-    vector<unsigned short> exon_cov_candidate_left_with = alter_coverage(exon_cov_candidate_left_without, min((unsigned int) candidate_left->start, conf->window_size), conf->window_size, true);
+    // check how objective is to be computed
+    // we need segments overlapping at least one of the two candidates
+    if (conf->use_mip_objective) {
+        // compute overlap between candidate and best alignments
+        set<unsigned long> overlap = candidate->get_overlap(*best);
+        pair<double, double> loss_candidate = genData->segments.get_exon_segment_loss(candidate, overlap, false);
+        pair<double, double> loss_best = genData->segments.get_exon_segment_loss(best, overlap, true);
 
-    vector<unsigned short> exon_cov_candidate_right_without;
-    candidate_right->get_coverage(conf->window_size, exon_cov_candidate_right_without, intron_cov_candidate_right);
-    vector<unsigned short> exon_cov_candidate_right_with =alter_coverage(exon_cov_candidate_right_without, min((unsigned int) candidate_right->start, conf->window_size), conf->window_size, true);
+        // check if any loss is valid
+        // first is loss_with and second is loss_without
+        if (loss_candidate.first >= 0.0 || loss_best.first >= 0.0) {
+            candidate_loss +=  (loss_candidate.first >= 0.0) ? loss_candidate.first : 0;
+            candidate_loss +=  (loss_best.second >= 0.0) ? loss_best.second : 0;
+            best_loss +=  (loss_candidate.second >= 0.0) ? loss_candidate.second : 0;
+            best_loss +=  (loss_best.first >= 0.0) ? loss_best.first : 0;
+            used_mip = true;
+        }
+    }
 
-    vector<unsigned short> exon_cov_best_left_with;
-    best_left->get_coverage(conf->window_size, exon_cov_best_left_with, intron_cov_best_left);
-    vector<unsigned short> exon_cov_best_left_without = alter_coverage(exon_cov_best_left_with, min((unsigned int) best_left->start, conf->window_size), conf->window_size, false);
-    vector<unsigned short> exon_cov_best_right_with;
-    best_right->get_coverage(conf->window_size, exon_cov_best_right_with, intron_cov_best_right);
-    vector<unsigned short> exon_cov_best_right_without = alter_coverage(exon_cov_best_right_with, min((unsigned int) best_right->start, conf->window_size), conf->window_size, false);
+    // if we never were supposed to use the mip objective or did not use it
+    // for other reasons, use the variance objective instead, but do not add it
+    // to the total loss for mip-objective
+    if (! conf->use_mip_objective || ! used_mip) {
+        vector<unsigned short> intron_cov_candidate;
+        vector<unsigned short> intron_cov_best;
+        vector<unsigned short> exon_cov_candidate_without; 
+        candidate->get_coverage(conf->window_size, exon_cov_candidate_without, intron_cov_candidate);
+        vector<unsigned short> exon_cov_best_with;
+        best->get_coverage(conf->window_size, exon_cov_best_with, intron_cov_best);
+        vector<unsigned short> exon_cov_candidate_with = alter_coverage(exon_cov_candidate_without, min((unsigned int) candidate->start, conf->window_size), conf->window_size, true);
+        vector<unsigned short> exon_cov_best_without = alter_coverage(exon_cov_best_with, min((unsigned int) best->start, conf->window_size), conf->window_size, false);
 
-    vector<unsigned short> empty_cov;
-    double var_cand_left_without = get_variance(exon_cov_candidate_left_without, empty_cov);
-    double var_cand_left_with = get_variance(exon_cov_candidate_left_with, intron_cov_candidate_left);
-    double var_cand_right_without = get_variance(exon_cov_candidate_right_without, empty_cov);
-    double var_cand_right_with = get_variance(exon_cov_candidate_right_with, intron_cov_candidate_right);
-    
-    double var_best_left_without = get_variance(exon_cov_best_left_without, empty_cov);
-    double var_best_left_with = get_variance(exon_cov_best_left_with, intron_cov_best_left);
-    double var_best_right_without = get_variance(exon_cov_best_right_without, empty_cov);
-    double var_best_right_with = get_variance(exon_cov_best_right_with, intron_cov_best_right);
+        vector<unsigned short> empty_cov;
+        double var_cand_without = get_variance(exon_cov_candidate_without, empty_cov);
+        double var_best_with = get_variance(exon_cov_best_with, intron_cov_best);
+        double var_cand_with = get_variance(exon_cov_candidate_with, intron_cov_candidate);
+        double var_best_without = get_variance(exon_cov_best_without, empty_cov);
 
-    return (var_cand_left_with + var_cand_right_with + var_best_left_without + var_best_right_without) < (var_cand_left_without + var_cand_right_without + var_best_left_with + var_best_right_with);
-}
+        best_loss = var_cand_without + var_best_with;
+        candidate_loss = var_cand_with + var_best_without;
+        //fprintf(stdout, "%f %f %f %f\n", var_cand_without, var_best_with, var_cand_with, var_best_without);
+        /*map <int, vector<unsigned short> >::iterator it = genData->coverage_map.begin();
+        for (it; it != genData->coverage_map.end(); it++) {
+            fprintf(stdout, "cov vec:\n");
+            for (vector<unsigned short>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++) {
+                fprintf(stdout, "%i ", (*it2));
+            }
+            fprintf(stdout, "\n");
+        }*/
+    }
 
-
-bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::iterator best) {
-
-    vector<unsigned short> intron_cov_candidate;
-    vector<unsigned short> intron_cov_best;
-    vector<unsigned short> exon_cov_candidate_without; 
-    candidate->get_coverage(conf->window_size, exon_cov_candidate_without, intron_cov_candidate);
-    vector<unsigned short> exon_cov_best_with;
-    best->get_coverage(conf->window_size, exon_cov_best_with, intron_cov_best);
-    vector<unsigned short> exon_cov_candidate_with = alter_coverage(exon_cov_candidate_without, min((unsigned int) candidate->start, conf->window_size), conf->window_size, true);
-    vector<unsigned short> exon_cov_best_without = alter_coverage(exon_cov_best_with, min((unsigned int) best->start, conf->window_size), conf->window_size, false);
-
-    vector<unsigned short> empty_cov;
-    double var_cand_without = get_variance(exon_cov_candidate_without, empty_cov);
-    double var_best_with = get_variance(exon_cov_best_with, intron_cov_best);
-    double var_cand_with = get_variance(exon_cov_candidate_with, intron_cov_candidate);
-    double var_best_without = get_variance(exon_cov_best_without, empty_cov);
-
-    return (var_cand_with + var_best_without) < (var_cand_without + var_best_with);
+    if (conf->use_mip_objective && ! used_mip) {
+        loss = -1.0;
+    } else {
+        loss = min(candidate_loss, best_loss);
+    }
+    return (candidate_loss < best_loss);
 }
 
 set<vector<Alignment>::iterator> filter_alignments(vector<Alignment> &aligns) {
@@ -337,7 +353,7 @@ void get_plifs_from_file() {
     char* ret;
     char line[1000];
     int i_count;
-    double c, sl1, sl2, sr1, sr2;
+    float c, sl1, sl2, sr1, sr2;
 
     map< double, vector<double> > plifs;
 
@@ -358,11 +374,11 @@ void get_plifs_from_file() {
         }
 
         vector<double> tmp_plif;
-        tmp_plif.push_back(sl1);
-        tmp_plif.push_back(sl2);
-        tmp_plif.push_back(sr1);
-        tmp_plif.push_back(sr2);
-        plifs.insert(plifs.begin(), pair<double, vector<double> >(c, tmp_plif));
+        tmp_plif.push_back((double) sl1);
+        tmp_plif.push_back((double) sl2);
+        tmp_plif.push_back((double) sr1);
+        tmp_plif.push_back((double) sr2);
+        plifs.insert(plifs.begin(), pair<double, vector<double> >((double) c, tmp_plif));
     }
 
     genData->plifs = plifs;

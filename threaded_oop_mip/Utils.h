@@ -31,9 +31,9 @@ string update_line_flag(char* line, bool is_best);
 
 void parse_header(char* sl);
 
-bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, vector<Alignment>::iterator best_left, vector<Alignment>::iterator best_right);
+bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, vector<Alignment>::iterator best_left, vector<Alignment>::iterator best_right, double &loss);
 
-bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::iterator best);
+bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::iterator best, double &loss);
 
 set<vector<Alignment>::iterator> filter_alignments(vector<Alignment> &aligns);
 

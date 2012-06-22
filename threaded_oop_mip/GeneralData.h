@@ -27,6 +27,10 @@ struct GeneralData {
     // data structure containing segment graph information
     Segments segments;
 
+    // count data 
+    double total_loss;
+    unsigned int num_altered;
+
 };
 #endif
 
