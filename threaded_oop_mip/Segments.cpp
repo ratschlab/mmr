@@ -156,8 +156,8 @@ pair<double, double> Segments::get_exon_segment_loss(vector<Alignment>::iterator
         }
 
         // compute loss with and without current alignment
-        loss_with += compute_loss(mean_cov_with, this->exon_ids[id->first]->expectation);
-        loss_without += compute_loss(mean_cov_without, this->exon_ids[id->first]->expectation);
+        loss_with += compute_mip_loss(mean_cov_with, this->exon_ids[id->first]->expectation);
+        loss_without += compute_mip_loss(mean_cov_without, this->exon_ids[id->first]->expectation);
     }
 
     pair<float, float> result (loss_with, loss_without);

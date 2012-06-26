@@ -168,6 +168,7 @@ void write_output(unordered_map <string, vector<Alignment> > &read_map_left, uno
         }
 
         char* sl = strtok(line, "\t");
+        curr_alignment.clear();
         id = curr_alignment.fill(sl, pair_info);
         if (id.size() == 0) {
             continue ;
@@ -288,7 +289,7 @@ int main(int argc, char *argv[]) {
 
         // computing active set of alignment
         // an alignment is active if it is currently the used alignment of a read
-        data->get_active_read_set(genData);
+        data->get_active_read_set();
 
         if (conf->use_mip_objective)
             prepare_mip_objective();
@@ -308,9 +309,9 @@ int main(int argc, char *argv[]) {
             num_ambiguous_paired = 0;
 
             if (conf->use_pair_info) {
-                num_changed_paired = data->smooth_coverage_map_paired(genData, num_ambiguous_paired);
+                num_changed_paired = data->smooth_coverage_map_paired( num_ambiguous_paired);
             } 
-            num_changed_single = data->smooth_coverage_map_single(genData, num_ambiguous_single);
+            num_changed_single = data->smooth_coverage_map_single(num_ambiguous_single);
 
             if (conf->verbose) { 
                 sum_min_loss = data->get_total_min_loss();

@@ -39,7 +39,7 @@ set<vector<Alignment>::iterator> filter_alignments(vector<Alignment> &aligns);
 
 void  get_plifs_from_file();
 
-double compute_loss(double observed_cov, double predicted_cov);
+double compute_mip_loss(double observed_cov, double predicted_cov);
 
 void prepare_mip_objective();
 

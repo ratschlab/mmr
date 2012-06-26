@@ -34,12 +34,12 @@ public:
     void parse_file();
     void pre_filter_alignment_maps();
     double get_total_min_loss();
-    void get_active_read_set(GeneralData* genData);
+    void get_active_read_set();
 
-    unsigned int smooth_coverage_map_single(GeneralData* genData, unsigned int &num_ambiguous);
-    unsigned int smooth_coverage_map_paired(GeneralData* genData, unsigned int &num_ambiguous);
+    unsigned int smooth_coverage_map_single(unsigned int &num_ambiguous);
+    unsigned int smooth_coverage_map_paired(unsigned int &num_ambiguous);
 
 private:
-    unsigned int smooth_coverage_map_single_wrapper(list<unordered_map <string, vector<Alignment> >::iterator > &active_reads, GeneralData* genData, unsigned int &num_ambiguous);
+    unsigned int smooth_coverage_map_single_wrapper(list<unordered_map <string, vector<Alignment> >::iterator > &active_reads, unsigned int &num_ambiguous);
 };
 #endif

@@ -118,7 +118,8 @@ void BatchData::parse_file() {
             fprintf(stderr, "\nERROR: Input file does not contain any header information!\n") ;
             exit(1);
         }
-
+        
+        curr_alignment.clear();
         id = curr_alignment.fill(sl, pair_info);
 
         if (id.size() == 0) {
@@ -160,7 +161,7 @@ void BatchData::parse_file() {
     fclose(infile);
 }
 
-void BatchData::get_active_read_set(GeneralData* genData) {
+void BatchData::get_active_read_set() {
 
     double insert1 = 0.0;
     double insert2 = 0.0;
@@ -178,7 +179,7 @@ void BatchData::get_active_read_set(GeneralData* genData) {
         if (conf->use_pair_info && r_idx != this->read_map_right.end()) {
             if (l_idx->second.size() < 2 && r_idx->second.size() < 2)
                 continue;
-            bool inserted = false;
+            bool pair_vecs_empty = true;
             bool best_pair_left = false;
             bool best_pair_right = false;
             for (vector<Alignment>::iterator lv_idx = l_idx->second.begin(); lv_idx != l_idx->second.end(); lv_idx++) {
@@ -187,14 +188,14 @@ void BatchData::get_active_read_set(GeneralData* genData) {
                         insert1 = abs((double) lv_idx->get_end() - (double) rv_idx->start);
                         insert2 = abs((double) rv_idx->get_end() - (double) lv_idx->start);
                         if (insert1 <= (conf->insert_size * (1.0 + conf->insert_dev)) || insert2 <= (conf->insert_size * (1.0 + conf->insert_dev))) {
-                            if (!inserted) {
+                            if (pair_vecs_empty) {
                                 vector<vector<Alignment>::iterator> tmp_vec;
                                 tmp_vec.push_back(lv_idx);
                                 this->active_left_pair.insert(pair<string, vector<vector<Alignment>::iterator> >(l_idx->first, tmp_vec));
                                 tmp_vec.clear();
                                 tmp_vec.push_back(rv_idx);
                                 this->active_right_pair.insert(pair<string, vector<vector<Alignment>::iterator> >(r_idx->first, tmp_vec));
-                                inserted = true;
+                                pair_vecs_empty = false;
                             } else {
                                 this->active_left_pair[l_idx->first].push_back(lv_idx);
                                 this->active_right_pair[r_idx->first].push_back(rv_idx);
@@ -207,7 +208,7 @@ void BatchData::get_active_read_set(GeneralData* genData) {
                     }
                 }
             }
-            if (!inserted) {
+            if (pair_vecs_empty) {
                 if (l_idx->second.size() > 1)
                     this->active_left_single.push_back(l_idx);
                 if (r_idx->second.size() > 1)
@@ -215,25 +216,31 @@ void BatchData::get_active_read_set(GeneralData* genData) {
             } else {
                 // check, if current best alignment is part of active left pairs
                 if (! best_pair_left) {
+                    bool broken = false;
                     for (vector<Alignment>::iterator lv_idx = l_idx->second.begin(); lv_idx != l_idx->second.end(); lv_idx++) {
                         if (lv_idx->is_best) {
                             lv_idx->is_best = false;
                             lv_idx->update_coverage_map(0);
+                            broken = true;
                             break;
                         }
                     }
+                    assert(broken);
                     this->active_left_pair[l_idx->first].front()->is_best = true;
                     this->active_left_pair[l_idx->first].front()->update_coverage_map(1);
                 }
                 // check, if current best alignment is part of active right pairs
                 if (! best_pair_right) {
+                    bool broken = false;
                     for (vector<Alignment>::iterator rv_idx = r_idx->second.begin(); rv_idx != r_idx->second.end(); rv_idx++) {
                         if (rv_idx->is_best) {
                             rv_idx->is_best = false;
                             rv_idx->update_coverage_map(0);
+                            broken = true;
                             break;
                         }
                     }
+                    assert(broken);
                     this->active_right_pair[r_idx->first].front()->is_best = true;
                     this->active_right_pair[r_idx->first].front()->update_coverage_map(1);
                 }
@@ -259,24 +266,22 @@ void BatchData::get_active_read_set(GeneralData* genData) {
 double BatchData::get_total_min_loss() {
 
     double sum_min_loss = 0.0; 
-    vector<unsigned short> tmp_cov;
-    vector<unsigned short> intron_cov;
+    set<unsigned long> empty;
+    pair<double, double> tmp_loss;
 
     for (unordered_map<string, vector<Alignment> >::iterator r_idx = this->read_map_left.begin(); r_idx != this->read_map_left.end(); r_idx++) {
         for (vector<Alignment>::iterator v_idx = r_idx->second.begin(); v_idx != r_idx->second.end(); v_idx++) {
             if (v_idx->is_best) {
-                intron_cov.clear();
-                v_idx->get_coverage(conf->window_size, tmp_cov, intron_cov);
-                sum_min_loss += get_variance(tmp_cov, intron_cov); 
+                tmp_loss = v_idx->get_variance_loss(empty, empty);
+                sum_min_loss += tmp_loss.first;
             }
         }
     }
     for (unordered_map<string, vector<Alignment> >::iterator r_idx = this->read_map_right.begin(); r_idx != this->read_map_right.end(); r_idx++) {
         for (vector<Alignment>::iterator v_idx = r_idx->second.begin(); v_idx != r_idx->second.end(); v_idx++) {
             if (v_idx->is_best) {
-                intron_cov.clear();
-                v_idx->get_coverage(conf->window_size, tmp_cov, intron_cov);
-                sum_min_loss += get_variance(tmp_cov, intron_cov); 
+                tmp_loss = v_idx->get_variance_loss(empty, empty);
+                sum_min_loss += tmp_loss.first;
             }
         }
     }
@@ -287,14 +292,14 @@ double BatchData::get_total_min_loss() {
     return sum_min_loss;
 }
 
-unsigned int BatchData::smooth_coverage_map_single(GeneralData* genData, unsigned int &num_ambiguous) {
+unsigned int BatchData::smooth_coverage_map_single(unsigned int &num_ambiguous) {
     unsigned int num_changed = 0;
-    num_changed += smooth_coverage_map_single_wrapper(this->active_left_single, genData, num_ambiguous);
-    num_changed += smooth_coverage_map_single_wrapper(this->active_right_single, genData, num_ambiguous);
+    num_changed += smooth_coverage_map_single_wrapper(this->active_left_single, num_ambiguous);
+    num_changed += smooth_coverage_map_single_wrapper(this->active_right_single, num_ambiguous);
     return num_changed;
 }
 
-unsigned int BatchData::smooth_coverage_map_single_wrapper(list<unordered_map <string, vector<Alignment> >::iterator > &active_reads, GeneralData* genData, unsigned int &num_ambiguous) {
+unsigned int BatchData::smooth_coverage_map_single_wrapper(list<unordered_map <string, vector<Alignment> >::iterator > &active_reads, unsigned int &num_ambiguous) {
 
         unsigned int num_changed = 0;
         unsigned int num_best = 0;
@@ -344,10 +349,9 @@ unsigned int BatchData::smooth_coverage_map_single_wrapper(list<unordered_map <s
         return num_changed;
 }
 
-unsigned int BatchData::smooth_coverage_map_paired(GeneralData* genData, unsigned int &num_ambiguous) {
+unsigned int BatchData::smooth_coverage_map_paired(unsigned int &num_ambiguous) {
 
         unsigned int num_changed = 0;
-        //unsigned int num_best = 0;
         double loss = 0.0;
 
         unordered_map<string, vector<vector<Alignment>::iterator> >::iterator l_idx;
@@ -361,7 +365,7 @@ unsigned int BatchData::smooth_coverage_map_paired(GeneralData* genData, unsigne
         bool found_best = false;
         bool changed = false;
 
-        for (l_idx =this->active_left_pair.begin(), r_idx = this->active_left_pair.begin(); l_idx != this->active_left_pair.end() && r_idx != this->active_right_pair.end(); l_idx++, r_idx++) {
+        for (l_idx = this->active_left_pair.begin(), r_idx = this->active_right_pair.begin(); l_idx != this->active_left_pair.end() && r_idx != this->active_right_pair.end(); l_idx++, r_idx++) {
             // find a best pairing
             found_best = false;
             changed = false;
@@ -394,6 +398,7 @@ unsigned int BatchData::smooth_coverage_map_paired(GeneralData* genData, unsigne
                     continue;
                 if (compare_pair(*lv_idx, *rv_idx, best_left_idx, best_right_idx, loss)) {
                     changed = true;
+                    fprintf(stdout, "old start left: %i  old start right: %i \n", best_left_idx->start, best_right_idx->start); 
                     best_left_idx->is_best = false;
                     best_right_idx->is_best = false;
                     best_left_idx->update_coverage_map(0);
@@ -404,12 +409,21 @@ unsigned int BatchData::smooth_coverage_map_paired(GeneralData* genData, unsigne
                     best_right_idx->is_best = true;
                     best_left_idx->update_coverage_map(1);
                     best_right_idx->update_coverage_map(1);
+                    fprintf(stdout, "new start left: %i  new start right: %i \n", best_left_idx->start, best_right_idx->start); 
                 }
             }
 
             if (changed)
                 num_changed++;
         
+        }
+        map <int, vector<unsigned short> >::iterator it = genData->coverage_map.begin();
+        for (it; it != genData->coverage_map.end(); it++) {
+            fprintf(stdout, "cov vec:\n");
+            for (vector<unsigned short>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++) {
+                fprintf(stdout, "%i ", (*it2));
+            }
+            fprintf(stdout, "\n");
         }
 
         /*if ((size_t) num_best != read_map.size()) {
@@ -419,5 +433,4 @@ unsigned int BatchData::smooth_coverage_map_paired(GeneralData* genData, unsigne
         //fprintf(stdout, "changed %i in paired", num_changed);
         return num_changed;
 }
-
 

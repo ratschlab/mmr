@@ -32,7 +32,9 @@ public:
 
     string fill(char* sl, unsigned char &pair);
 
-    void get_coverage(unsigned int window_size, vector<unsigned short> &intron_cov, vector<unsigned short> &exon_cov);
+    //pair<double, double> get_variance_loss(set<unsigned long> overlap_region);
+    pair<double, double> get_variance_loss(set<unsigned long> covered_pos, set<unsigned long> not_covered_pos);
+
     void update_coverage_map(bool positive);
     unsigned long get_end();
     
@@ -45,5 +47,9 @@ public:
     void get_blocks(vector<pair<unsigned long, unsigned long> > &blocks);
 
     set<unsigned long> get_overlap(Alignment &other);
+
+    set<unsigned long> get_genome_pos();
+
+    void clear();
 };
 #endif

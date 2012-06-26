@@ -4,6 +4,7 @@
 #include <set>
 #include <cmath>
 #include <algorithm>
+#include <assert.h>
 
 #include "Alignment.h"
 #include "GeneralData.h"
@@ -63,9 +64,11 @@ double get_variance(vector<unsigned short> &exon_coverage, vector<unsigned short
     } else {
         double sum = 0.0;
         double int_pnlty = 0.0;
-        for ( vector<unsigned short>::iterator it = exon_coverage.begin(); it != exon_coverage.end(); it++) {
+/*        for ( vector<unsigned short>::iterator it = exon_coverage.begin(); it != exon_coverage.end(); it++) {
             sum += (double) *it;
+            fprintf(stdout, "%i ", *it);
         }
+        fprintf(stdout, "\n");*/
         double mean = sum / (double) exon_coverage.size();
         sum = 0.0;
         for ( vector<unsigned short>::iterator it = exon_coverage.begin(); it != exon_coverage.end(); it++) {
@@ -75,7 +78,9 @@ double get_variance(vector<unsigned short> &exon_coverage, vector<unsigned short
         if (intron_coverage.size() > 0) {
             int_pnlty = intron_penalty(intron_coverage);
         }
-
+        
+        //fprintf(stdout, "var: %f, intron: %f\n", (sum / ((double) exon_coverage.size() - 1.0)), int_pnlty);
+        // TODO
         return (sum / ((double) exon_coverage.size() - 1.0)) + int_pnlty;  
     }
 }
@@ -171,49 +176,42 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
     double candidate_loss = 0.0;
     double best_loss = 0.0;
 
+    // compute overlap between candidate alignments
+    set<unsigned long> already_covered_pos;
+    set<unsigned long> not_covered_pos;
+    set<unsigned long> empty_set;
+    set<unsigned long> overlap;
+    set<unsigned long> genome_pos_cl = candidate_left->get_genome_pos();
+    set<unsigned long> genome_pos_cr = candidate_right->get_genome_pos();
+    set<unsigned long> genome_pos_bl = best_left->get_genome_pos();
+    set<unsigned long> genome_pos_br = best_right->get_genome_pos();
+
+    pair<double, double> loss_cl, loss_cr, loss_bl, loss_br;
+
     // check how objective is to be computed
     // we need segments overlapping at least one of the two candidates
     if (conf->use_mip_objective) {
        
-        // compute overlap between candidate alignments
-        set<unsigned long> overlap;
-        set<unsigned long> overlap_cl_bl = candidate_left->get_overlap(*best_left);
-        set<unsigned long> overlap_cl_br = candidate_left->get_overlap(*best_right); 
-        set<unsigned long> overlap_cr_bl = candidate_right->get_overlap(*best_left);
-        set<unsigned long> overlap_cr_br = candidate_right->get_overlap(*best_right); 
-
         // loss candidate_left
-        set_union(overlap_cl_bl.begin(), overlap_cl_bl.end(), overlap_cl_br.begin(), overlap_cl_br.end(), inserter(overlap, overlap.begin()));
-        pair<double, double> loss_cl = genData->segments.get_exon_segment_loss(candidate_left, overlap, false);
-        overlap.clear();
+        set_union(genome_pos_bl.begin(), genome_pos_bl.end(), genome_pos_br.begin(), genome_pos_br.end(), inserter(overlap, overlap.begin()));
+        loss_cl = genData->segments.get_exon_segment_loss(candidate_left, overlap, false);
 
         // loss candidate_rigth
-        set_union(overlap_cr_bl.begin(), overlap_cr_bl.end(), overlap_cr_br.begin(), overlap_cr_br.end(), inserter(overlap, overlap.begin()));
-        pair<double, double> loss_cr = genData->segments.get_exon_segment_loss(candidate_right, overlap, false);
+        loss_cr = genData->segments.get_exon_segment_loss(candidate_right, overlap, false);
         overlap.clear();
 
         // loss best_left
-        set_union(overlap_cr_bl.begin(), overlap_cr_bl.end(), overlap_cl_bl.begin(), overlap_cl_bl.end(), inserter(overlap, overlap.begin()));
-        pair<double, double> loss_bl = genData->segments.get_exon_segment_loss(best_left, overlap, true);
-        overlap.clear();
+        set_union(genome_pos_cl.begin(), genome_pos_cl.end(), genome_pos_cr.begin(), genome_pos_cr.end(), inserter(overlap, overlap.begin()));
+        loss_bl = genData->segments.get_exon_segment_loss(best_left, overlap, true);
 
         // loss best_right
-        set_union(overlap_cr_br.begin(), overlap_cr_br.end(), overlap_cl_br.begin(), overlap_cl_br.end(), inserter(overlap, overlap.begin()));
-        pair<double, double> loss_br = genData->segments.get_exon_segment_loss(best_right, overlap, true);
+        loss_br = genData->segments.get_exon_segment_loss(best_right, overlap, true);
         overlap.clear();
 
         // check if any loss is valid
         // first is loss_with and second is loss_without
         if (loss_cl.first >= 0.0 || loss_cr.first >= 0.0 || loss_br.first >= 0.0 || loss_bl.first >= 0.0) {
-            candidate_loss +=  (loss_cl.first >= 0.0) ? loss_cl.first : 0;
-            candidate_loss +=  (loss_cr.first >= 0.0) ? loss_cl.first : 0;
-            candidate_loss +=  (loss_bl.second >= 0.0) ? loss_bl.second : 0;
-            candidate_loss +=  (loss_br.second >= 0.0) ? loss_br.second : 0;
-            best_loss +=  (loss_cl.second >= 0.0) ? loss_cl.second : 0;
-            best_loss +=  (loss_cr.second >= 0.0) ? loss_cl.second : 0;
-            best_loss +=  (loss_bl.first >= 0.0) ? loss_bl.first : 0;
-            best_loss +=  (loss_br.first >= 0.0) ? loss_br.first : 0;
-            used_mip = true;
+           used_mip = true;
         }
     }
 
@@ -221,45 +219,47 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
     // for other reasons, use the variance objective instead, but do not add it
     // to the total loss for mip-objective
     if (! conf->use_mip_objective || ! used_mip) {
-        vector<unsigned short> intron_cov_candidate_left;
-        vector<unsigned short> intron_cov_candidate_right;
-        vector<unsigned short> intron_cov_best_left;
-        vector<unsigned short> intron_cov_best_right;
 
-        vector<unsigned short> exon_cov_candidate_left_without;
-        candidate_left->get_coverage(conf->window_size, exon_cov_candidate_left_without, intron_cov_candidate_left);
-        vector<unsigned short> exon_cov_candidate_left_with = alter_coverage(exon_cov_candidate_left_without, min((unsigned int) candidate_left->start, conf->window_size), conf->window_size, true);
+        // loss candidate_left
+        set_union(genome_pos_bl.begin(), genome_pos_bl.end(), genome_pos_br.begin(), genome_pos_br.end(), inserter(already_covered_pos, already_covered_pos.begin()));
+        loss_cl = candidate_left->get_variance_loss(already_covered_pos, empty_set);
 
-        vector<unsigned short> exon_cov_candidate_right_without;
-        candidate_right->get_coverage(conf->window_size, exon_cov_candidate_right_without, intron_cov_candidate_right);
-        vector<unsigned short> exon_cov_candidate_right_with =alter_coverage(exon_cov_candidate_right_without, min((unsigned int) candidate_right->start, conf->window_size), conf->window_size, true);
+        // loss candidate_rigth
+        loss_cr = candidate_right->get_variance_loss(already_covered_pos, empty_set);
+        already_covered_pos.clear();
+        not_covered_pos.clear();
 
-        vector<unsigned short> exon_cov_best_left_with;
-        best_left->get_coverage(conf->window_size, exon_cov_best_left_with, intron_cov_best_left);
-        vector<unsigned short> exon_cov_best_left_without = alter_coverage(exon_cov_best_left_with, min((unsigned int) best_left->start, conf->window_size), conf->window_size, false);
-        vector<unsigned short> exon_cov_best_right_with;
-        best_right->get_coverage(conf->window_size, exon_cov_best_right_with, intron_cov_best_right);
-        vector<unsigned short> exon_cov_best_right_without = alter_coverage(exon_cov_best_right_with, min((unsigned int) best_right->start, conf->window_size), conf->window_size, false);
-
-        vector<unsigned short> empty_cov;
-        double var_cand_left_without = get_variance(exon_cov_candidate_left_without, empty_cov);
-        double var_cand_left_with = get_variance(exon_cov_candidate_left_with, intron_cov_candidate_left);
-        double var_cand_right_without = get_variance(exon_cov_candidate_right_without, empty_cov);
-        double var_cand_right_with = get_variance(exon_cov_candidate_right_with, intron_cov_candidate_right);
-        
-        double var_best_left_without = get_variance(exon_cov_best_left_without, empty_cov);
-        double var_best_left_with = get_variance(exon_cov_best_left_with, intron_cov_best_left);
-        double var_best_right_without = get_variance(exon_cov_best_right_without, empty_cov);
-        double var_best_right_with = get_variance(exon_cov_best_right_with, intron_cov_best_right);
-
-        best_loss = var_cand_left_without + var_cand_right_without + var_best_left_with + var_best_right_with;
-        candidate_loss = var_cand_left_with + var_cand_right_with + var_best_left_without + var_best_right_without;
+        // loss best_left and loss best_right
+        assert(!candidate_left->is_best || !candidate_right->is_best);
+        if (!candidate_left->is_best && !candidate_right->is_best) {
+            set_union(genome_pos_cl.begin(), genome_pos_cl.end(), genome_pos_cr.begin(), genome_pos_cr.end(), inserter(not_covered_pos, not_covered_pos.begin()));
+            loss_bl = best_left->get_variance_loss(empty_set, not_covered_pos);
+            loss_br = best_right->get_variance_loss(empty_set, not_covered_pos);
+        } else if (candidate_left->is_best) {
+            loss_bl = best_left->get_variance_loss(genome_pos_cl, genome_pos_cr);
+            loss_br = best_right->get_variance_loss(genome_pos_cl, genome_pos_cr);
+        } else if (candidate_right->is_best) {
+            loss_bl = best_left->get_variance_loss(genome_pos_cr, genome_pos_cl);
+            loss_br = best_right->get_variance_loss(genome_pos_cr, genome_pos_cl);
+        }
     }
+
+    // determine total loss
+    candidate_loss +=  (loss_cl.first >= 0.0) ? loss_cl.first : 0;
+    candidate_loss +=  (loss_cr.first >= 0.0) ? loss_cl.first : 0;
+    candidate_loss +=  (loss_bl.second >= 0.0) ? loss_bl.second : 0;
+    candidate_loss +=  (loss_br.second >= 0.0) ? loss_br.second : 0;
+    best_loss +=  (loss_cl.second >= 0.0) ? loss_cl.second : 0;
+    best_loss +=  (loss_cr.second >= 0.0) ? loss_cl.second : 0;
+    best_loss +=  (loss_bl.first >= 0.0) ? loss_bl.first : 0;
+    best_loss +=  (loss_br.first >= 0.0) ? loss_br.first : 0;
+ 
     if (conf->use_mip_objective && ! used_mip) {
         loss = -1.0;
     } else {
         loss = min(candidate_loss, best_loss);
     }
+    //fprintf(stdout, "cand loss: %f  best loss: %f\n", candidate_loss, best_loss);
     return (candidate_loss < best_loss);
 }
 
@@ -269,21 +269,23 @@ bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::it
     double candidate_loss = 0.0;
     double best_loss = 0.0;
 
+    // compute overlap between candidate and best alignments
+    set<unsigned long> genome_pos_candidate = candidate->get_genome_pos();
+    set<unsigned long> genome_pos_best = best->get_genome_pos();
+    set<unsigned long> empty_set;
+
+    pair<double, double> loss_candidate, loss_best;
+
     // check how objective is to be computed
     // we need segments overlapping at least one of the two candidates
     if (conf->use_mip_objective) {
-        // compute overlap between candidate and best alignments
-        set<unsigned long> overlap = candidate->get_overlap(*best);
-        pair<double, double> loss_candidate = genData->segments.get_exon_segment_loss(candidate, overlap, false);
-        pair<double, double> loss_best = genData->segments.get_exon_segment_loss(best, overlap, true);
+
+        loss_candidate = genData->segments.get_exon_segment_loss(candidate, genome_pos_best, false);
+        loss_best = genData->segments.get_exon_segment_loss(best, genome_pos_candidate, true);
 
         // check if any loss is valid
         // first is loss_with and second is loss_without
         if (loss_candidate.first >= 0.0 || loss_best.first >= 0.0) {
-            candidate_loss +=  (loss_candidate.first >= 0.0) ? loss_candidate.first : 0;
-            candidate_loss +=  (loss_best.second >= 0.0) ? loss_best.second : 0;
-            best_loss +=  (loss_candidate.second >= 0.0) ? loss_candidate.second : 0;
-            best_loss +=  (loss_best.first >= 0.0) ? loss_best.first : 0;
             used_mip = true;
         }
     }
@@ -292,33 +294,15 @@ bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::it
     // for other reasons, use the variance objective instead, but do not add it
     // to the total loss for mip-objective
     if (! conf->use_mip_objective || ! used_mip) {
-        vector<unsigned short> intron_cov_candidate;
-        vector<unsigned short> intron_cov_best;
-        vector<unsigned short> exon_cov_candidate_without; 
-        candidate->get_coverage(conf->window_size, exon_cov_candidate_without, intron_cov_candidate);
-        vector<unsigned short> exon_cov_best_with;
-        best->get_coverage(conf->window_size, exon_cov_best_with, intron_cov_best);
-        vector<unsigned short> exon_cov_candidate_with = alter_coverage(exon_cov_candidate_without, min((unsigned int) candidate->start, conf->window_size), conf->window_size, true);
-        vector<unsigned short> exon_cov_best_without = alter_coverage(exon_cov_best_with, min((unsigned int) best->start, conf->window_size), conf->window_size, false);
 
-        vector<unsigned short> empty_cov;
-        double var_cand_without = get_variance(exon_cov_candidate_without, empty_cov);
-        double var_best_with = get_variance(exon_cov_best_with, intron_cov_best);
-        double var_cand_with = get_variance(exon_cov_candidate_with, intron_cov_candidate);
-        double var_best_without = get_variance(exon_cov_best_without, empty_cov);
-
-        best_loss = var_cand_without + var_best_with;
-        candidate_loss = var_cand_with + var_best_without;
-        //fprintf(stdout, "%f %f %f %f\n", var_cand_without, var_best_with, var_cand_with, var_best_without);
-        /*map <int, vector<unsigned short> >::iterator it = genData->coverage_map.begin();
-        for (it; it != genData->coverage_map.end(); it++) {
-            fprintf(stdout, "cov vec:\n");
-            for (vector<unsigned short>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++) {
-                fprintf(stdout, "%i ", (*it2));
-            }
-            fprintf(stdout, "\n");
-        }*/
+        loss_candidate = candidate->get_variance_loss(genome_pos_best, empty_set);
+        loss_best = best->get_variance_loss(empty_set, genome_pos_candidate);
     }
+
+    candidate_loss +=  (loss_candidate.first >= 0.0) ? loss_candidate.first : 0;
+    candidate_loss +=  (loss_best.second >= 0.0) ? loss_best.second : 0;
+    best_loss +=  (loss_candidate.second >= 0.0) ? loss_candidate.second : 0;
+    best_loss +=  (loss_best.first >= 0.0) ? loss_best.first : 0;
 
     if (conf->use_mip_objective && ! used_mip) {
         loss = -1.0;
@@ -385,7 +369,7 @@ void get_plifs_from_file() {
     
 }
 
-double compute_loss(double observed_cov, double predicted_cov) {
+double compute_mip_loss(double observed_cov, double predicted_cov) {
     
     // get plif iterators to interpolate entries
     map< double, vector<double> >::iterator lower = genData->plifs.upper_bound(observed_cov);

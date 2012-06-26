@@ -317,6 +317,7 @@ char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData
 
         char* sl = strtok(line, "\t");
 
+        curr_alignment.clear();
         id = curr_alignment.fill(sl, pair_info);
 
         if (id.size() == 0) {
