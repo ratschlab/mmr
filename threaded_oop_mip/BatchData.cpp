@@ -398,7 +398,6 @@ unsigned int BatchData::smooth_coverage_map_paired(unsigned int &num_ambiguous) 
                     continue;
                 if (compare_pair(*lv_idx, *rv_idx, best_left_idx, best_right_idx, loss)) {
                     changed = true;
-                    fprintf(stdout, "old start left: %i  old start right: %i \n", best_left_idx->start, best_right_idx->start); 
                     best_left_idx->is_best = false;
                     best_right_idx->is_best = false;
                     best_left_idx->update_coverage_map(0);
@@ -409,7 +408,6 @@ unsigned int BatchData::smooth_coverage_map_paired(unsigned int &num_ambiguous) 
                     best_right_idx->is_best = true;
                     best_left_idx->update_coverage_map(1);
                     best_right_idx->update_coverage_map(1);
-                    fprintf(stdout, "new start left: %i  new start right: %i \n", best_left_idx->start, best_right_idx->start); 
                 }
             }
 
@@ -417,14 +415,14 @@ unsigned int BatchData::smooth_coverage_map_paired(unsigned int &num_ambiguous) 
                 num_changed++;
         
         }
-        map <int, vector<unsigned short> >::iterator it = genData->coverage_map.begin();
+      /*  map <int, vector<unsigned short> >::iterator it = genData->coverage_map.begin();
         for (it; it != genData->coverage_map.end(); it++) {
             fprintf(stdout, "cov vec:\n");
             for (vector<unsigned short>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++) {
                 fprintf(stdout, "%i ", (*it2));
             }
             fprintf(stdout, "\n");
-        }
+        }*/
 
         /*if ((size_t) num_best != read_map.size()) {
             fprintf(stderr, "best: %i  map size: %i", num_best, (int) read_map.size());
