@@ -18,13 +18,13 @@ public:
 
     // outer map: chr as key, inner map as value
     // inner map: stores exon start or stop as key, segment id as value
-    map<unsigned int, multimap<long, long> > exons;
+    map<unsigned int, map<long, long> > exons;
     // stores segment id as key, segment object as value
     map<long, Segment*> exon_ids;
     // outer map: chr as key, inner map as value
-    // inner map: stores intron start or stap as key, segment id as value
-    map<unsigned int, multimap<long, long> > introns;
-    // stores segment id as key, pair of segment start and len as value
+    // inner map: stores intron start as key, segment id as value
+    map<unsigned int, multimap<unsigned long, unsigned long> > introns;
+    // stores segment id as key, segment object as value
     map<long, Segment*> intron_ids;
 
     Segments() {};

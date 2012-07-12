@@ -213,6 +213,7 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
         if (loss_cl.first >= 0.0 || loss_cr.first >= 0.0 || loss_br.first >= 0.0 || loss_bl.first >= 0.0) {
            used_mip = true;
         }
+        //fprintf(stderr, "cand loss left: %f  cand loss right: %f best loss left: %f best loss right:%f\n", loss_cl.first, loss_cr.first, loss_bl.first, loss_br.first);
     }
 
     // if we never were supposed to use the mip objective or did not use it
@@ -259,7 +260,6 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
     } else {
         loss = min(candidate_loss, best_loss);
     }
-    //fprintf(stdout, "cand loss: %f  best loss: %f\n", candidate_loss, best_loss);
     return (candidate_loss < best_loss);
 }
 
@@ -309,6 +309,7 @@ bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::it
     } else {
         loss = min(candidate_loss, best_loss);
     }
+//    fprintf(stderr, "single cand loss: %f  single best loss: %f\n", candidate_loss, best_loss);
     return (candidate_loss < best_loss);
 }
 
@@ -370,26 +371,25 @@ void get_plifs_from_file() {
 }
 
 double compute_mip_loss(double observed_cov, double predicted_cov) {
+
+    if (observed_cov > 30000)
+        observed_cov = 30000;
+    if (observed_cov < 0)
+        observed_cov = 0;
     
     // get plif iterators to interpolate entries
-    map< double, vector<double> >::iterator lower = genData->plifs.upper_bound(observed_cov);
-    lower--;
-    map< double, vector<double> >::iterator upper = genData->plifs.upper_bound(observed_cov);
+    map< double, vector<double> >::iterator upper = genData->plifs.lower_bound(observed_cov);
+    map< double, vector<double> >::iterator lower = upper;
+    if (observed_cov > 0)
+        lower--;
 
     double loss = 0.0;
 
-    if (observed_cov < 0)
-        observed_cov = 0;
-
     // determine if left or right part of function needs to be queried
     if (predicted_cov > observed_cov) {
-        if (observed_cov > 30000)
-            observed_cov = 30000;
-        loss = ((lower->second.at(1) + upper->second.at(1)) / 2)*predicted_cov*predicted_cov + ((lower->second.at(2) + upper->second.at(2)) / 2)*predicted_cov; 
+        loss = ((lower->second.at(0) + upper->second.at(0)) / 2)*predicted_cov*predicted_cov + ((lower->second.at(1) + upper->second.at(1)) / 2)*predicted_cov; 
     } else {
-        if (observed_cov > 30000)
-            observed_cov = 30000;
-        loss = ((lower->second.at(3) + upper->second.at(3)) / 2)*predicted_cov*predicted_cov + ((lower->second.at(4) + upper->second.at(4)) / 2)*predicted_cov; 
+        loss = ((lower->second.at(2) + upper->second.at(2)) / 2)*predicted_cov*predicted_cov + ((lower->second.at(3) + upper->second.at(3)) / 2)*predicted_cov; 
     }
 
     return loss;

@@ -157,6 +157,7 @@ void Alignment::update_coverage_map(bool positive) {
 
     pthread_mutex_lock(&mutex_coverage);
     vector<unsigned short>::iterator idx = genData->coverage_map[this->chr].begin() + this->start;
+    unsigned long pos = this->start;
 
     for (size_t i = 0; i < this->sizes.size(); i++) {
         switch (this->operations.at(i)) {
@@ -164,10 +165,22 @@ void Alignment::update_coverage_map(bool positive) {
                                     if (idx < genData->coverage_map[this->chr].end()) {
                                         *idx += (*idx > 0 || positive) ? (2*positive - 1) : 0; 
                                         idx++;
+                                        pos++;
                                     }
                                 }; 
                                 break;
-            case 'N': idx += this->sizes.at(i);
+            case 'N': { if (genData->intron_coverage_map.find(this->chr) == genData->intron_coverage_map.end()) {
+                            map<pair<unsigned long, unsigned long>, unsigned int> tmp;
+                            genData->intron_coverage_map.insert(pair<int, map< pair<unsigned long, unsigned long>, unsigned int> >((int) this->chr, tmp));
+                        }
+                        map< pair<unsigned long, unsigned long>, unsigned int>::iterator it = genData->intron_coverage_map[this->chr].find(pair<unsigned long, unsigned long>(pos, pos + this->sizes.at(i) - 1));
+                        if (it != genData->intron_coverage_map[this->chr].end())
+                            it->second += 1;
+                        else
+                            genData->intron_coverage_map[this->chr].insert(pair<pair<unsigned long, unsigned long>, unsigned int>(pair<unsigned long, unsigned long>(pos, pos + this->sizes.at(i) - 1), 1));
+                        pos += this->sizes.at(i);
+                        idx += this->sizes.at(i);
+                      }
         }
         if (idx >= genData->coverage_map[this->chr].end())
             break;
@@ -282,6 +295,7 @@ set<unsigned long> Alignment::get_genome_pos() {
 
     return position_set;
 }
+
 void Alignment::clear() {
     this->chr = 0;
     this->start = 0;

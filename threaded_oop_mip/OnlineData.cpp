@@ -104,7 +104,8 @@ void OnlineData::process_data_online(GeneralData* genData) {
                 genData->best_right[this->last_id] = (best_right_idx - this->right_reads.begin()); 
                 pthread_mutex_unlock(&mutex_best_right);
             }
-            min_loss = min(min_loss, loss);
+            if (loss >= 0.0)
+                min_loss = min(min_loss, loss);
         }
         total_min_loss += (min_loss < numeric_limits<double>::max()) ? min_loss : 0;
         if (changed) 
@@ -137,7 +138,8 @@ void OnlineData::process_data_online(GeneralData* genData) {
                 genData->best_left[this->last_id] = (*curr_best - this->left_reads.begin()); 
                 pthread_mutex_unlock(&mutex_best_left);
             }
-            min_loss = min(min_loss, loss);
+            if (loss >= 0.0)
+                min_loss = min(min_loss, loss);
         }
         total_min_loss += (min_loss < numeric_limits<double>::max()) ? min_loss : 0;
         if (changed) 
@@ -158,7 +160,7 @@ void OnlineData::process_data_online(GeneralData* genData) {
         for (rv_idx = active_right_reads.begin(); rv_idx != active_right_reads.end(); rv_idx++) {
             if (rv_idx == curr_best)
                 continue;
-
+            
             // check if rv_idx < curr_best
             if (compare_single(*rv_idx, *curr_best, loss)) {
                 changed = true;
@@ -171,7 +173,8 @@ void OnlineData::process_data_online(GeneralData* genData) {
                 genData->best_right[this->last_id] = (*curr_best - this->right_reads.begin()); 
                 pthread_mutex_unlock(&mutex_best_right);
             }
-            min_loss = min(min_loss, loss);
+            if (loss >= 0.0)
+                min_loss = min(min_loss, loss);
         }
         total_min_loss += (min_loss < numeric_limits<double>::max()) ? min_loss : 0;
         if (changed) 
@@ -364,6 +367,7 @@ char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData
             }
         }
     }
+
     strcpy(last_line, cp_line);
     return ret;
 }
