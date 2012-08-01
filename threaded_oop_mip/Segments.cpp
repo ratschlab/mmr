@@ -204,28 +204,3 @@ pair<double, double> Segments::get_exon_segment_loss(vector<Alignment>::iterator
     pair<float, float> result (loss_with, loss_without);
     return result;
 }
-
-/*set<long> Segments::get_affected_intron_segs(vector<Alignment>::iterator alignment) {
-    
-    set<long> result;
-
-    // check, if alignment has at least one intron
-    if (! alignment->is_spliced())
-        return result;
-
-    // get list of introns
-    vector< pair< unsigned long, unsigned int> > align_introns = alignment->get_intron_coords();
-
-    // iterate over all introns
-    vector< pair< unsigned long, unsigned int> >::iterator it;
-    for (it = align_introns.begin(); it != align_introns.end(); it++) {
-        multimap<long, long>::iterator start = this->introns[alignment->chr].find(it->first);
-        multimap<long, long>::iterator stop = this->introns[alignment->chr].find(it->first + (unsigned long) it->second - 1);
-        
-        if (start != this->introns[alignment->chr].end() && stop != this->introns[alignment->chr].end() && start == stop) {
-            result.insert(start->second);
-        }
-    }
-
-    return result;
-}*/
