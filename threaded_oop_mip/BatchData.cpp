@@ -92,7 +92,7 @@ void BatchData::parse_file() {
 
         if (!ret) {
             if (counter == 1) {
-                fprintf(stderr, "Could not read SAM file %s\n", conf->infile.c_str());
+                fprintf(stderr, "ERROR: Could not read SAM file %s\n", conf->infile.c_str());
                 exit(1);
             }
             else {
