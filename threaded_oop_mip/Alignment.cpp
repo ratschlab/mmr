@@ -239,11 +239,11 @@ void Alignment::get_blocks(vector<pair<unsigned long, unsigned long> > &blocks) 
         if (this->operations.at(i) == 'M' || this->operations.at(i) == 'D') {
             curr_pos += sizes.at(i);
         } else if (this->operations.at(i) == 'N') {
-            blocks.push_back(make_pair(last_pos, curr_pos));
+            blocks.push_back(make_pair(last_pos, curr_pos - 1));
             last_pos = curr_pos;
         }
     }
-    blocks.push_back(make_pair(last_pos, curr_pos));
+    blocks.push_back(make_pair(last_pos, curr_pos - 1));
 }
 
 set<unsigned long> Alignment::get_overlap(Alignment &other) {

@@ -25,7 +25,7 @@ public:
     // inner map: stores intron start as key, segment id as value
     map<unsigned int, multimap<unsigned long, unsigned long> > introns;
     // stores segment id as key, segment object as value
-    map<long, Segment*> intron_ids;
+    map<long, Segment*> introns_by_ids;
 
     Segments() {};
     ~Segments() {};

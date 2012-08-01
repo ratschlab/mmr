@@ -27,6 +27,8 @@ Config::Config(int argc, char *argv[]) {
             use_pair_info = true;
         } else if (!strcmp(argv[i], "-m") || !strcmp(argv[i], "--mip-objective")) {
             use_mip_objective = true;
+        } else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--mip-variance")) {
+            use_mip_variance = true;
         } else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "--insert-size")) {
             insert_size = (double) atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--insert-dev")) {
@@ -50,7 +52,7 @@ Config::Config(int argc, char *argv[]) {
             outfile = std::string(argv[++i]);
         } else if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "--segmentfile")) {
             segmentfile = std::string(argv[++i]);
-        } else if (!strcmp(argv[i], "-l") || !strcmp(argv[i], "_-lossfile")) {
+        } else if (!strcmp(argv[i], "-l") || !strcmp(argv[i], "--lossfile")) {
             lossfile = std::string(argv[++i]);
         } else {
             if (argv[i][0] == '-') {
