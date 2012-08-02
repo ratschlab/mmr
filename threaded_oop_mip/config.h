@@ -22,6 +22,7 @@ class Config {
         bool pre_filter;
         bool parse_complete;
         bool use_mip_objective;
+        bool use_mip_variance;
         
         unsigned int window_size;
         unsigned int iterations;

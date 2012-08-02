@@ -444,6 +444,8 @@ int main(int argc, char *argv[]) {
                 fprintf(stdout, "\nsuccessfully parsed %i lines\n", counter - 1);
                 fprintf(stdout, "changed %i alignments\n", genData->num_altered);
                 fprintf(stdout, "total objective: %f\n", (float) genData->total_loss);
+                if (conf->use_mip_objective)
+                    fprintf(stdout, "total objective (2): %f\n", (float) genData->segments.get_total_loss());
             }
         }
 

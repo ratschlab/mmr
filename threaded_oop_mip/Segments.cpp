@@ -178,7 +178,7 @@ pair<double, double> Segments::get_exon_segment_loss(vector<Alignment>::iterator
             loss_without += compute_mip_loss(mean_cov_without, this->exon_ids[id->first]->expectation);
         }
     }
-    else if (!conf.use_mip_variance) {
+    else if (!conf->use_mip_variance) {
         // iterate over blocks instead of segments
         for (block = exon_blocks.begin(); block != exon_blocks.end(); block++) {
             unsigned int block_cov = 0;
@@ -205,6 +205,7 @@ pair<double, double> Segments::get_exon_segment_loss(vector<Alignment>::iterator
             // compute loss with and without current alignment
             loss_with += compute_mip_loss(mean_cov_with, 0);
             loss_without += compute_mip_loss(mean_cov_without, 0);
+        }
     } else {
         loss_with = -1.0;
         loss_without = -1.0;
@@ -235,7 +236,7 @@ pair<double, double> Segments::get_exon_segment_loss(vector<Alignment>::iterator
             loss_without += compute_mip_loss(intron_cov_without, this->introns_by_ids[*id_int]->expectation);
         }
     }
-    else if (!conf.use_mip_variance) {
+    else if (!conf->use_mip_variance) {
         // iterate over 
         if (exon_blocks.size() > 1) {
             for (block = exon_blocks.begin() + 1; block != exon_blocks.end(); block++) {
@@ -262,4 +263,27 @@ pair<double, double> Segments::get_exon_segment_loss(vector<Alignment>::iterator
 
     pair<float, float> result (loss_with, loss_without);
     return result;
+}
+
+double Segments::get_total_loss() {
+    
+    double total_loss = 0.0;
+
+    // get total exon segment loss
+    for (map<long, Segment*>::iterator it = this->exon_ids.begin(); it != this->exon_ids.end(); it++) {
+        unsigned long curr_cov = 0;
+        for (vector<unsigned short>::iterator cov_idx = genData->coverage_map[it->second->chr].begin() + it->second->start - 1; cov_idx != genData->coverage_map[it->second->chr].begin() + it->second->start + it->second->length - 2; cov_idx++) {
+            curr_cov += (unsigned long) (*cov_idx); 
+        }
+        total_loss += compute_mip_loss(curr_cov / it->second->length, it->second->expectation);
+    }
+
+    // get total intron segment loss
+    for (map<long, Segment*>::iterator it = this->introns_by_ids.begin(); it != this->introns_by_ids.end(); it++) {
+        map< pair<unsigned long, unsigned long>, unsigned int>::iterator i_cov= genData->intron_coverage_map[it->second->chr].find(pair<unsigned long, unsigned long>(it->second->start, it->second->start + it->second->length - 1));
+        if (i_cov != genData->intron_coverage_map[it->second->chr].end())
+            total_loss += compute_mip_loss(i_cov->second, it->second->expectation);
+    }
+
+    return total_loss;
 }

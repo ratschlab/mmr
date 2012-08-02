@@ -83,8 +83,8 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\n\tInput file filtering:\n");
     fprintf(stderr, "\t-f --pre-filter \tpre filter all alignments that have F more edit ops than the best [off]\n");
     fprintf(stderr, "\t-F --filter-dist [INT]\tfilter distance F for pre-filter [3]\n");
-    fprintf(stderr, "\t-V --use-variants \t\tuse variant alignments for filtering (different edit op count,\n");
-    fprintf(stderr, "\t\t\t\t\trequires XG and XM Tag in alignment files) [off]\n");
+    fprintf(stderr, "\t-V --use-variants \tuse variant alignments for filtering (different edit op count,\n");
+    fprintf(stderr, "\t\t\t\trequires XG and XM Tag in alignment files) [off]\n");
     // Paired Alignment options
     fprintf(stderr, "\n\tPaired alignment handling:\n");
     fprintf(stderr, "\t-p --pair-usage \tpre use pair information in the reads [off]\n");
@@ -98,10 +98,11 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-w --windowsize  [INT]\tsize of coverage window around read [20]\n");
     fprintf(stderr, "\t-I --iterations  [INT]\tnumber of iterations to smooth the coverage [5]\n");
     // MIP Options
-    fprintf(stderr, "\t\nOptions for using the MiTie objective for smoothing:\n");
-    fprintf(stderr, "\t-m --mip-objective \tuse objective from MIP instead of local variance [off]\n");
+    fprintf(stderr, "\n\tOptions for using the MiTie objective for smoothing:\n");
+    fprintf(stderr, "\t-m --mip-objective \tuse objective from MiTie instead of local variance [off]\n");
     fprintf(stderr, "\t-s --segmentfile \tsegment file required for mip optimization []\n");
     fprintf(stderr, "\t-l --lossfile \t\tloss parameter file required for mip optimization []\n");
+    fprintf(stderr, "\t-v --mip-variance \tuse variance smoothing for regions with no MiTie prediction [off]\n");
     // General options
     fprintf(stderr, "\n\tGeneral:\n");
     fprintf(stderr, "\t-v --verbose \t\tswitch on verbose output [off]\n");
@@ -126,6 +127,7 @@ void Config::init() {
     num_threads = 1;
     max_fifo_size = 1000;
     use_variants = false;
+    use_mip_variance = false;
     segmentfile = string();
     lossfile = string();
 }
