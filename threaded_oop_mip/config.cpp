@@ -27,7 +27,7 @@ Config::Config(int argc, char *argv[]) {
             use_pair_info = true;
         } else if (!strcmp(argv[i], "-m") || !strcmp(argv[i], "--mip-objective")) {
             use_mip_objective = true;
-        } else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--mip-variance")) {
+        } else if (!strcmp(argv[i], "-M") || !strcmp(argv[i], "--mip-variance")) {
             use_mip_variance = true;
         } else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "--insert-size")) {
             insert_size = (double) atoi(argv[++i]);
@@ -102,7 +102,7 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-m --mip-objective \tuse objective from MiTie instead of local variance [off]\n");
     fprintf(stderr, "\t-s --segmentfile \tsegment file required for mip optimization []\n");
     fprintf(stderr, "\t-l --lossfile \t\tloss parameter file required for mip optimization []\n");
-    fprintf(stderr, "\t-v --mip-variance \tuse variance smoothing for regions with no MiTie prediction [off]\n");
+    fprintf(stderr, "\t-M --mip-variance \tuse variance smoothing for regions with no MiTie prediction [off]\n");
     // General options
     fprintf(stderr, "\n\tGeneral:\n");
     fprintf(stderr, "\t-v --verbose \t\tswitch on verbose output [off]\n");

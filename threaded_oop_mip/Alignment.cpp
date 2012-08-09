@@ -175,7 +175,7 @@ void Alignment::update_coverage_map(bool positive) {
                         }
                         map< pair<unsigned long, unsigned long>, unsigned int>::iterator it = genData->intron_coverage_map[this->chr].find(pair<unsigned long, unsigned long>(pos, pos + this->sizes.at(i) - 1));
                         if (it != genData->intron_coverage_map[this->chr].end())
-                            it->second += 1;
+                            it->second += (it->second > 0 || positive) ? (2*positive - 1) : 0;
                         else
                             genData->intron_coverage_map[this->chr].insert(pair<pair<unsigned long, unsigned long>, unsigned int>(pair<unsigned long, unsigned long>(pos, pos + this->sizes.at(i) - 1), 1));
                         pos += this->sizes.at(i);
@@ -190,6 +190,7 @@ void Alignment::update_coverage_map(bool positive) {
 }
 
 unsigned long Alignment::get_end() {
+    // return alignment end in CLOSED intervals
     
     unsigned long end = this->start;
     for (size_t i = 0; i < this->sizes.size(); i++) {
@@ -197,7 +198,8 @@ unsigned long Alignment::get_end() {
             end += this->sizes.at(i);
         }
     }
-    return end;
+    
+    return end == this->start?end:end - 1;
 }
 
 bool Alignment::comparator(const Alignment &left, const Alignment &right) {
@@ -240,6 +242,7 @@ void Alignment::get_blocks(vector<pair<unsigned long, unsigned long> > &blocks) 
             curr_pos += sizes.at(i);
         } else if (this->operations.at(i) == 'N') {
             blocks.push_back(make_pair(last_pos, curr_pos - 1));
+            curr_pos += sizes.at(i);
             last_pos = curr_pos;
         }
     }
@@ -305,4 +308,12 @@ void Alignment::clear() {
     this->edit_ops = 0;
     this->quality = 0;
     this->reversed = false;
+}
+
+void Alignment::print() {
+    fprintf(stdout, "chr: %i, start: %i, cigar: ", this->chr, (int) this->start);
+    for (unsigned int i = 0; i < this->sizes.size(); i++) {
+        fprintf(stdout, "%i%c", this->sizes.at(i), this->operations.at(i));
+    }
+    fprintf(stdout, ", is_best: %i\n", this->is_best);
 }

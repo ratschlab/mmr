@@ -51,5 +51,7 @@ public:
     set<unsigned long> get_genome_pos();
 
     void clear();
+    
+    void print();
 };
 #endif

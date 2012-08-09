@@ -193,19 +193,35 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
     if (conf->use_mip_objective) {
        
         // loss candidate_left
-        set_union(genome_pos_bl.begin(), genome_pos_bl.end(), genome_pos_br.begin(), genome_pos_br.end(), inserter(overlap, overlap.begin()));
-        loss_cl = genData->segments.get_exon_segment_loss(candidate_left, overlap, false);
+        if (candidate_left == best_left) {
+            loss_cl = pair<double, double>(0.0, 0.0);
+        } else {
+            set_union(genome_pos_bl.begin(), genome_pos_bl.end(), genome_pos_br.begin(), genome_pos_br.end(), inserter(overlap, overlap.begin()));
+            loss_cl = genData->segments.get_exon_segment_loss(candidate_left, overlap, false);
+        }
 
         // loss candidate_rigth
-        loss_cr = genData->segments.get_exon_segment_loss(candidate_right, overlap, false);
+        if (candidate_right == best_right) {
+            loss_cr = pair<double, double>(0.0, 0.0);
+        } else {
+            loss_cr = genData->segments.get_exon_segment_loss(candidate_right, overlap, false);
+        }
         overlap.clear();
 
         // loss best_left
-        set_union(genome_pos_cl.begin(), genome_pos_cl.end(), genome_pos_cr.begin(), genome_pos_cr.end(), inserter(overlap, overlap.begin()));
-        loss_bl = genData->segments.get_exon_segment_loss(best_left, overlap, true);
+        if (candidate_left == best_left) {
+            loss_bl = pair<double, double>(0.0, 0.0);
+        } else {
+            set_union(genome_pos_cl.begin(), genome_pos_cl.end(), genome_pos_cr.begin(), genome_pos_cr.end(), inserter(overlap, overlap.begin()));
+            loss_bl = genData->segments.get_exon_segment_loss(best_left, overlap, true);
+        }
 
         // loss best_right
-        loss_br = genData->segments.get_exon_segment_loss(best_right, overlap, true);
+        if (candidate_right == best_right) {
+            loss_br = pair<double, double>(0.0, 0.0);
+        } else {
+            loss_br = genData->segments.get_exon_segment_loss(best_right, overlap, true);
+        }
         overlap.clear();
 
         // check if any loss is valid
@@ -213,7 +229,8 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
         if (loss_cl.first >= 0.0 || loss_cr.first >= 0.0 || loss_br.first >= 0.0 || loss_bl.first >= 0.0) {
            used_mip = true;
         }
-        //fprintf(stderr, "cand loss left: %f  cand loss right: %f best loss left: %f best loss right:%f\n", loss_cl.first, loss_cr.first, loss_bl.first, loss_br.first);
+        //fprintf(stdout, "cand loss left (w): %f  cand loss right (w): %f best loss left (w): %f best loss right (w):%f\n", loss_cl.first, loss_cr.first, loss_bl.first, loss_br.first);
+        //fprintf(stdout, "cand loss left (wo): %f  cand loss right (wo): %f best loss left (wo): %f best loss right (wo):%f\n\n", loss_cl.second, loss_cr.second, loss_bl.second, loss_br.second);
     }
 
     // if we never were supposed to use the mip objective or did not use it
@@ -385,11 +402,15 @@ double compute_mip_loss(double observed_cov, double predicted_cov) {
 
     double loss = 0.0;
 
+    double diff = abs(predicted_cov - observed_cov);
+
     // determine if left or right part of function needs to be queried
     if (predicted_cov > observed_cov) {
-        loss = ((lower->second.at(0) + upper->second.at(0)) / 2)*predicted_cov*predicted_cov + ((lower->second.at(1) + upper->second.at(1)) / 2)*predicted_cov; 
+        //loss = ((lower->second.at(0) + upper->second.at(0)) / 2)*predicted_cov*predicted_cov + ((lower->second.at(1) + upper->second.at(1)) / 2)*predicted_cov; 
+        loss = ((lower->second.at(0) + upper->second.at(0)) / 2)*diff*diff + ((lower->second.at(1) + upper->second.at(1)) / 2)*diff; 
     } else {
-        loss = ((lower->second.at(2) + upper->second.at(2)) / 2)*predicted_cov*predicted_cov + ((lower->second.at(3) + upper->second.at(3)) / 2)*predicted_cov; 
+        //loss = ((lower->second.at(2) + upper->second.at(2)) / 2)*predicted_cov*predicted_cov + ((lower->second.at(3) + upper->second.at(3)) / 2)*predicted_cov; 
+        loss = ((lower->second.at(2) + upper->second.at(2)) / 2)*diff*diff + ((lower->second.at(3) + upper->second.at(3)) / 2)*diff; 
     }
 
     return loss;
