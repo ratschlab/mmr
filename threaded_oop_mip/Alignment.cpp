@@ -33,16 +33,22 @@ string Alignment::fill(char* sl, unsigned char &pair) {
                 this->chr = genData->chr_num[sl];
             }
         } else if (idx == 3) {
-            this->start = strtoul(sl, NULL, 0) - 1;
+            this->start = strtoul(sl, NULL, 0);
+            this->start--; // 1-based --> 0-based
         } else if (idx == 4) {
             this->quality = (unsigned  char) atoi(sl);
         } else if (idx == 5) {
             parse_cigar(sl, this->operations, this->sizes);
         } else if (!conf->use_variants && strlen(sl) > 3 && sl[0] == 'N' && sl[1] == 'M' && sl[2] == ':') {
             this->edit_ops = atoi(sl+5); 
-            break;
+            if (!conf->strand_specific)
+                break;
         } else if (conf->use_variants && strlen(sl) > 3 && sl[0] == 'X' && (sl[1] == 'M' || sl[1] == 'G') && sl[2] == ':') {
-            edit_ops += atoi(sl+5);
+           this-> edit_ops += atoi(sl+5);
+            if (!conf->strand_specific)
+                break;
+        } else if (conf->strand_specific && strlen(sl) > 3 && sl[0] == 'X' && sl[1] == 'S' && sl[2] == ':') {
+            this->strand = *(sl+5);
             break;
         }
         sl = strtok(NULL, "\t");
@@ -54,20 +60,18 @@ string Alignment::fill(char* sl, unsigned char &pair) {
     return id;
 }
 
-//pair<double, double> Alignment::get_variance_loss(vector<Alignment>::iterator other_left, vector<Alignment>::iterator other_right, bool is_paired) {
-//pair<double, double> Alignment::get_variance_loss(set<unsigned long> overlap_region) {
 pair<double, double> Alignment::get_variance_loss(set<unsigned long> covered_pos, set<unsigned long> not_covered_pos) {
 
-    vector<unsigned short>::iterator cov_idx = genData->coverage_map[this->chr].begin();
-    vector<unsigned short>::iterator intron_cov_idx;
+    vector<unsigned int>::iterator cov_idx = genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].begin();
+    vector<unsigned int>::iterator intron_cov_idx;
     
-    vector<unsigned short> exon_cov_with;
-    vector<unsigned short> exon_cov_without;
-    vector<unsigned short> intron_cov;
+    vector<unsigned int> exon_cov_with;
+    vector<unsigned int> exon_cov_without;
+    vector<unsigned int> intron_cov;
 
     unsigned long genome_pos = 0;
-    unsigned short adjust_up = 0;
-    unsigned short adjust_down = 0;
+    unsigned int adjust_up = 0;
+    unsigned int adjust_down = 0;
     unsigned int offset = (conf->window_size >= this->start)?this->start:conf->window_size;
     size_t step_size = 1;
 
@@ -79,7 +83,7 @@ pair<double, double> Alignment::get_variance_loss(set<unsigned long> covered_pos
         
     // get coverage from preceding windows
     for (size_t i = 0; i < offset; i++) {
-        if (cov_idx < genData->coverage_map[this->chr].end()) {
+        if (cov_idx < genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].end()) {
             adjust_up = (not_covered_pos.find(genome_pos) != not_covered_pos.end()) ? 1 : 0;
             adjust_down = (covered_pos.find(genome_pos) != covered_pos.end()) ? 1 : 0;
             exon_cov_with.push_back((*cov_idx) - adjust_down);
@@ -95,13 +99,13 @@ pair<double, double> Alignment::get_variance_loss(set<unsigned long> covered_pos
     for (size_t i = 0; i < this->sizes.size(); i++) {
         switch (this->operations.at(i)) {
             case 'M': case 'D': { for (int j = 0; j < this->sizes.at(i); j++) {
-                                    if (cov_idx < genData->coverage_map[this->chr].end()) {
+                                    if (cov_idx < genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].end()) {
                                         adjust_up = (not_covered_pos.find(genome_pos) != not_covered_pos.end()) ? 1 : 0;
                                         adjust_down = (covered_pos.find(genome_pos) != covered_pos.end()) ? 1 : 0;
 
                                         if (this->is_best) {
                                             exon_cov_with.push_back(*cov_idx);
-                                            exon_cov_without.push_back(max(0, (*cov_idx) - 1 + adjust_up));
+                                            exon_cov_without.push_back(max((unsigned int) 0, (*cov_idx) - 1 + adjust_up));
                                         } else {
                                             exon_cov_with.push_back((*cov_idx) + 1 - adjust_down);
                                             exon_cov_without.push_back(*cov_idx);
@@ -114,7 +118,7 @@ pair<double, double> Alignment::get_variance_loss(set<unsigned long> covered_pos
                                 }
             case 'N': { step_size = max(this->sizes.at(i) / 50, 1);
                         for (int j = conf->intron_offset; j < this->sizes.at(i) - conf->intron_offset; j += step_size) {
-                            if (intron_cov_idx < genData->coverage_map[this->chr].end()) {
+                            if (intron_cov_idx < genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].end()) {
                                 adjust_down = (covered_pos.find(genome_pos) != covered_pos.end()) ? 1 : 0;
                                 intron_cov_idx = cov_idx + j;
                                 if (this->is_best)
@@ -132,7 +136,7 @@ pair<double, double> Alignment::get_variance_loss(set<unsigned long> covered_pos
 
     // get coverage from following windows
     for (size_t i = 0; i < conf->window_size; i++) {
-        if (cov_idx < genData->coverage_map[this->chr].end()) {
+        if (cov_idx < genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].end()) {
             adjust_up = (not_covered_pos.find(genome_pos) != not_covered_pos.end()) ? 1 : 0;
             adjust_down = (covered_pos.find(genome_pos) != covered_pos.end()) ? 1 : 0;
             exon_cov_with.push_back((*cov_idx) - adjust_down);
@@ -146,7 +150,7 @@ pair<double, double> Alignment::get_variance_loss(set<unsigned long> covered_pos
     }
   
     // compute variance loss
-    vector<unsigned short> empty_cov;
+    vector<unsigned int> empty_cov;
     double loss_with = get_variance(exon_cov_with, intron_cov);
     double loss_without = get_variance(exon_cov_without, empty_cov);
 
@@ -156,33 +160,34 @@ pair<double, double> Alignment::get_variance_loss(set<unsigned long> covered_pos
 void Alignment::update_coverage_map(bool positive) {
 
     pthread_mutex_lock(&mutex_coverage);
-    vector<unsigned short>::iterator idx = genData->coverage_map[this->chr].begin() + this->start;
+    //fprintf(stdout, "update coverage map on chr %i\n", this->chr);
+    vector<unsigned int>::iterator idx = genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].begin() + this->start;
     unsigned long pos = this->start;
 
     for (size_t i = 0; i < this->sizes.size(); i++) {
         switch (this->operations.at(i)) {
             case 'M': case 'D': for (int j = 0; j < this->sizes.at(i); j++) {
-                                    if (idx < genData->coverage_map[this->chr].end()) {
+                                    if (idx < genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].end()) {
                                         *idx += (*idx > 0 || positive) ? (2*positive - 1) : 0; 
                                         idx++;
                                         pos++;
                                     }
                                 }; 
                                 break;
-            case 'N': { if (genData->intron_coverage_map.find(this->chr) == genData->intron_coverage_map.end()) {
+            case 'N': { if (genData->intron_coverage_map.find(pair<unsigned char, unsigned char>(this->chr, this->strand)) == genData->intron_coverage_map.end()) {
                             map<pair<unsigned long, unsigned long>, unsigned int> tmp;
-                            genData->intron_coverage_map.insert(pair<int, map< pair<unsigned long, unsigned long>, unsigned int> >((int) this->chr, tmp));
+                            genData->intron_coverage_map.insert(pair<pair<unsigned char, unsigned char>, map< pair<unsigned long, unsigned long>, unsigned int> >(pair<unsigned char, unsigned char>(this->chr, this->strand), tmp));
                         }
-                        map< pair<unsigned long, unsigned long>, unsigned int>::iterator it = genData->intron_coverage_map[this->chr].find(pair<unsigned long, unsigned long>(pos, pos + this->sizes.at(i) - 1));
-                        if (it != genData->intron_coverage_map[this->chr].end())
+                        map< pair<unsigned long, unsigned long>, unsigned int>::iterator it = genData->intron_coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].find(pair<unsigned long, unsigned long>(pos, pos + this->sizes.at(i) - 1));
+                        if (it != genData->intron_coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].end())
                             it->second += (it->second > 0 || positive) ? (2*positive - 1) : 0;
                         else
-                            genData->intron_coverage_map[this->chr].insert(pair<pair<unsigned long, unsigned long>, unsigned int>(pair<unsigned long, unsigned long>(pos, pos + this->sizes.at(i) - 1), 1));
+                            genData->intron_coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].insert(pair<pair<unsigned long, unsigned long>, unsigned int>(pair<unsigned long, unsigned long>(pos, pos + this->sizes.at(i) - 1), 1));
                         pos += this->sizes.at(i);
                         idx += this->sizes.at(i);
                       }
         }
-        if (idx >= genData->coverage_map[this->chr].end())
+        if (idx >= genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].end())
             break;
     }
 
@@ -253,28 +258,28 @@ set<unsigned long> Alignment::get_overlap(Alignment &other) {
     set<unsigned long> local_pos;
     set<unsigned long> overlap;
 
-    if (this->chr != other.chr)
+    if (this->chr != other.chr || this->strand != other.strand)
         return overlap;
 
     unsigned long genome_pos = this->start;
     for (size_t i = 0; i < this->operations.size(); i++) {
-        if (this->operations.at(i) == 'M') {
+        if (this->operations.at(i) == 'M' || this->operations.at(i) == 'D') {
             for  (int j = 0; j < this->sizes.at(i); j++) {
                 local_pos.insert(genome_pos++);
             }
-        } else if (this->operations.at(i) == 'D' || this->operations.at(i) == 'N') {
+        } else if (this->operations.at(i) == 'N') {
             genome_pos += this->sizes.at(i);
         }
     }
 
     genome_pos = other.start;
     for (size_t i = 0; i < other.operations.size(); i++) {
-        if (other.operations.at(i) == 'M') {
+        if (other.operations.at(i) == 'M' || other.operations.at(i) == 'D') {
             for  (int j = 0; j < other.sizes.at(i); j++) {
                 if (local_pos.find(genome_pos) != local_pos.end())
                     overlap.insert(genome_pos++);
             }
-        } else if (other.operations.at(i) == 'D' || other.operations.at(i) == 'N') {
+        } else if (other.operations.at(i) == 'N') {
             genome_pos += other.sizes.at(i);
         }
     }
@@ -308,10 +313,11 @@ void Alignment::clear() {
     this->edit_ops = 0;
     this->quality = 0;
     this->reversed = false;
+    this->strand = '+';
 }
 
 void Alignment::print() {
-    fprintf(stdout, "chr: %i, start: %i, cigar: ", this->chr, (int) this->start);
+    fprintf(stdout, "chr: %i, strand: %c start: %lu, cigar: ", this->chr, this->strand, this->start);
     for (unsigned int i = 0; i < this->sizes.size(); i++) {
         fprintf(stdout, "%i%c", this->sizes.at(i), this->operations.at(i));
     }

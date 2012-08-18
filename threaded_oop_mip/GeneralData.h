@@ -13,12 +13,12 @@ using namespace std;
 struct GeneralData {
 
     // general coverage structures
-    map <string, int> chr_num;
+    map <string, unsigned char> chr_num;
     vector <unsigned int> chr_size;
-    map <int, vector<unsigned short> > coverage_map;
+    map <pair<unsigned char, unsigned char>, vector<unsigned int> > coverage_map; // contains coverage vector for each chr/strand pair
 
     // intron coverage map (will only be used for MIP optimization)
-    map <int, map< pair<unsigned long, unsigned long>, unsigned int> > intron_coverage_map;
+    map <pair<unsigned char, unsigned char>, map< pair<unsigned long, unsigned long>, unsigned int> > intron_coverage_map;
 
     // best hit maps (will stay empty for batch setting)
     unordered_map <string, size_t, hash<string> > best_left;
@@ -33,6 +33,9 @@ struct GeneralData {
     // count data 
     double total_loss;
     unsigned int num_altered;
+
+    // loss by segment id
+    map<long, double> loss_by_segment;
 
 };
 #endif

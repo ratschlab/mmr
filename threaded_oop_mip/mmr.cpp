@@ -130,7 +130,7 @@ void write_output_direct() {
         fprintf(stdout, "... done.\nPrinted %i lines.\n", output_counter);
 }
 
-void write_output(unordered_map <string, vector<Alignment> > &read_map_left, unordered_map <string, vector<Alignment> > &read_map_right, map<string, int> &chr_num) {
+void write_output(unordered_map <string, vector<Alignment> > &read_map_left, unordered_map <string, vector<Alignment> > &read_map_right, map<string, unsigned char> &chr_num) {
 
     FILE* outfile = open_bam_pipe_out(conf->outfile);
     FILE* infile = open_bam_pipe_in(conf->infile);
@@ -228,6 +228,9 @@ void *process_data_online_wrapper(void *arg) {
 int main(int argc, char *argv[]) {
 
     conf = new Config::Config(argc, argv);
+
+    if (conf->verbose)
+        conf->print_call(argv[0]);
 
     if (conf->parse_complete) {
         BatchData* data = new BatchData();
@@ -338,6 +341,7 @@ int main(int argc, char *argv[]) {
 
         for (unsigned int iteration = 0; iteration < conf->iterations; iteration++) {
             
+            conf->iteration = iteration;
             OnlineData* data = new OnlineData();
             pthread_mutex_lock(&mutex_done);
             done = false;

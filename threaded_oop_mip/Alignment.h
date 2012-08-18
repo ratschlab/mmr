@@ -18,13 +18,14 @@ public:
     bool is_best;
     unsigned char edit_ops;
     unsigned char quality;
+    unsigned char strand;
     bool reversed;
 
-    Alignment(const unsigned char a, const unsigned long b, const vector<char> c, const vector<int> cc, const bool d, const unsigned char e, const unsigned char f, bool g) :
-        chr(a), start(b), operations(c), sizes(cc), is_best(d), edit_ops(e) , quality(f), reversed(g) {}
+    Alignment(const unsigned char a, const unsigned long b, const vector<char> c, const vector<int> cc, const bool d, const unsigned char e, const unsigned char f, const unsigned char g, bool h) :
+        chr(a), start(b), operations(c), sizes(cc), is_best(d), edit_ops(e) , quality(f), strand(g), reversed(h) {}
 
     Alignment() :
-        chr(0), start(0), is_best(false), edit_ops(0), quality(0), reversed(false) {}
+        chr(0), start(0), is_best(false), edit_ops(0), quality(0), strand('+'), reversed(false) {}
 
     ~Alignment() {};
 

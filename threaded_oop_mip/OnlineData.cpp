@@ -81,11 +81,17 @@ void OnlineData::process_data_online(GeneralData* genData) {
         assert(best_found);
 
         bool changed = false;
-        for(lv_idx = active_left_reads.begin(), rv_idx = active_right_reads.begin(); lv_idx < active_left_reads.end() && rv_idx  < active_right_reads.end(); lv_idx++, rv_idx++) {
-            if ((*lv_idx)  == best_left_idx && (*rv_idx) == best_right_idx)
+        double new_total_loss = 0.0;
+        for(lv_idx = active_left_reads.begin(), rv_idx = active_right_reads.begin(); lv_idx != active_left_reads.end() && rv_idx != active_right_reads.end(); lv_idx++, rv_idx++) {
+            if ((*lv_idx) == best_left_idx && (*rv_idx) == best_right_idx)
                 continue;
             if (compare_pair(*lv_idx, *rv_idx, best_left_idx, best_right_idx, loss)) {
+
                 changed = true;
+
+                vector<Alignment>::iterator old_best_left = best_left_idx;
+                vector<Alignment>::iterator old_best_right = best_right_idx;
+
                 best_left_idx->is_best = false;
                 best_right_idx->is_best = false;
                 best_left_idx->update_coverage_map(0);
@@ -97,6 +103,38 @@ void OnlineData::process_data_online(GeneralData* genData) {
                 best_left_idx->update_coverage_map(1);
                 best_right_idx->update_coverage_map(1);
                 
+                /*if (conf->iteration > 0) {
+                    new_total_loss = genData->segments.get_total_loss();
+                    if (new_total_loss > conf->last_loss) {
+                        // do rollback
+                        best_left_idx->is_best = false;
+                        best_right_idx->is_best = false;
+                        best_left_idx->update_coverage_map(0);
+                        best_right_idx->update_coverage_map(0);
+                        best_left_idx = old_best_left;
+                        best_right_idx = old_best_right;
+                        best_left_idx->is_best = true;
+                        best_right_idx->is_best = true;
+                        best_left_idx->update_coverage_map(1);
+                        best_right_idx->update_coverage_map(1);
+                        compare_pair(*lv_idx, *rv_idx, best_left_idx, best_right_idx, loss, true);
+                        fprintf(stdout, "loss so far: %f\n", conf->last_loss);
+                        fprintf(stdout, "loss now: %f\n\n", new_total_loss);
+                        // roll-roll-back
+                        best_left_idx->is_best = false;
+                        best_right_idx->is_best = false;
+                        best_left_idx->update_coverage_map(0);
+                        best_right_idx->update_coverage_map(0);
+                        best_left_idx = *lv_idx;
+                        best_right_idx = *rv_idx;
+                        best_left_idx->is_best = true;
+                        best_right_idx->is_best = true;
+                        best_left_idx->update_coverage_map(1);
+                        best_right_idx->update_coverage_map(1);
+                    }
+                    conf->last_loss = new_total_loss;
+                }*/
+
                 pthread_mutex_lock(&mutex_best_left);
                 genData->best_left[this->last_id] = (best_left_idx - this->left_reads.begin()); 
                 pthread_mutex_unlock(&mutex_best_left);
@@ -110,6 +148,7 @@ void OnlineData::process_data_online(GeneralData* genData) {
         total_min_loss += (min_loss < numeric_limits<double>::max()) ? min_loss : 0;
         if (changed) 
             num_changed++;
+
     } else {
         bool best_found = false;
         for (lv_idx = active_left_reads.begin(); lv_idx != active_left_reads.end(); lv_idx++) {
@@ -123,20 +162,50 @@ void OnlineData::process_data_online(GeneralData* genData) {
             assert(best_found);
         bool changed = false;
         for (lv_idx = active_left_reads.begin(); lv_idx != active_left_reads.end(); lv_idx++) {
-            if (lv_idx == curr_best)
+            if (*lv_idx == *curr_best)
                 continue;
 
+            vector<Alignment>::iterator old_best = *curr_best;
             // check if lv_idx < curr_best
             if (compare_single(*lv_idx, *curr_best, loss)) {
                 changed = true;
                 (*curr_best)->is_best = false;
                 (*curr_best)->update_coverage_map(0);
-                curr_best = lv_idx;          
+                *curr_best = *lv_idx;          
                 (*curr_best)->is_best = true;
                 (*curr_best)->update_coverage_map(1);
+        /*        if (conf->iteration > 0) {
+                    double new_total_loss = genData->segments.get_total_loss();
+                    if (new_total_loss > conf->last_loss) {
+                        // do rollback
+                        old_best->print();
+                        (*curr_best)->print();
+                        (*lv_idx)->print();
+                        (*curr_best)->is_best = false;
+                        (*curr_best)->update_coverage_map(0);
+                        (*curr_best) = old_best;
+                        (*curr_best)->is_best = true;
+                        (*curr_best)->update_coverage_map(1);
+                        (*lv_idx)->print();
+                        (*curr_best)->print();
+                        compare_single(*lv_idx, *curr_best, loss, true);
+                        fprintf(stdout, "left single:\n");
+                        fprintf(stdout, "loss so far: %f\n", conf->last_loss);
+                        fprintf(stdout, "loss now: %f\n\n", new_total_loss);
+                        // roll-roll-back
+                        (*curr_best)->is_best = false;
+                        (*curr_best)->update_coverage_map(0);
+                        *curr_best = *lv_idx;          
+                        (*curr_best)->is_best = true;
+                        (*curr_best)->update_coverage_map(1);
+                    }
+                    conf->last_loss = new_total_loss;
+                }*/
+
                 pthread_mutex_lock(&mutex_best_left);
                 genData->best_left[this->last_id] = (*curr_best - this->left_reads.begin()); 
                 pthread_mutex_unlock(&mutex_best_left);
+
             }
             if (loss >= 0.0)
                 min_loss = min(min_loss, loss);
@@ -158,17 +227,43 @@ void OnlineData::process_data_online(GeneralData* genData) {
         changed = false;
         min_loss = numeric_limits<double>::max();
         for (rv_idx = active_right_reads.begin(); rv_idx != active_right_reads.end(); rv_idx++) {
-            if (rv_idx == curr_best)
+            if (*rv_idx == *curr_best)
                 continue;
             
+            vector<Alignment>::iterator old_best = *curr_best;
             // check if rv_idx < curr_best
             if (compare_single(*rv_idx, *curr_best, loss)) {
                 changed = true;
                 (*curr_best)->is_best = false;
                 (*curr_best)->update_coverage_map(0);
-                curr_best = rv_idx;          
+                *curr_best = *rv_idx;          
                 (*curr_best)->is_best = true;
                 (*curr_best)->update_coverage_map(1);
+                /*if (conf->iteration > 0) {
+                    double new_total_loss = genData->segments.get_total_loss();
+                    if (new_total_loss > conf->last_loss) {
+                        old_best->print();
+                        (*curr_best)->print();
+                        // do rollback
+                        (*curr_best)->is_best = false;
+                        (*curr_best)->update_coverage_map(0);
+                        (*curr_best) = old_best;
+                        (*curr_best)->is_best = true;
+                        (*curr_best)->update_coverage_map(1);
+                        compare_single(*rv_idx, *curr_best, loss, true);
+                        fprintf(stdout, "right single:\n");
+                        fprintf(stdout, "loss so far: %f\n", conf->last_loss);
+                        fprintf(stdout, "loss now: %f\n\n", new_total_loss);
+                        // roll-roll-back
+                        (*curr_best)->is_best = false;
+                        (*curr_best)->update_coverage_map(0);
+                        *curr_best = *rv_idx;          
+                        (*curr_best)->is_best = true;
+                        (*curr_best)->update_coverage_map(1);
+                    }
+                    conf->last_loss = new_total_loss;
+                }*/
+
                 pthread_mutex_lock(&mutex_best_right);
                 genData->best_right[this->last_id] = (*curr_best - this->right_reads.begin()); 
                 pthread_mutex_unlock(&mutex_best_right);
@@ -179,12 +274,11 @@ void OnlineData::process_data_online(GeneralData* genData) {
         total_min_loss += (min_loss < numeric_limits<double>::max()) ? min_loss : 0;
         if (changed) 
             num_changed++;
+
     }
-    
     pthread_mutex_lock(&mutex_counter);
     genData->total_loss += total_min_loss;
     genData->num_altered += num_changed;
-    
     pthread_mutex_unlock(&mutex_counter);
     delete this;
 }
@@ -209,7 +303,7 @@ void OnlineData::get_active_reads(string read_id, set<vector<Alignment>::iterato
             for (vector<Alignment>::iterator rv_idx = this->right_reads.begin(); rv_idx != this->right_reads.end(); rv_idx++) {
                 if (conf->pre_filter && (ignore_reads_right.find(rv_idx) != ignore_reads_right.end()))
                     continue;
-                if ((rv_idx->chr == lv_idx->chr) && (rv_idx->reversed != lv_idx->reversed)) {
+                if ((rv_idx->chr == lv_idx->chr) && (rv_idx->strand == lv_idx->strand) && (rv_idx->reversed != lv_idx->reversed)) {
                     insert1 = abs((double) lv_idx->get_end() - (double) rv_idx->start);
                     insert2 = abs((double) rv_idx->get_end() - (double) lv_idx->start);
                     if (insert1 <= (conf->insert_size * (1.0 + conf->insert_dev)) || insert2 <= (conf->insert_size * (1.0 + conf->insert_dev))) {
@@ -338,7 +432,9 @@ char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData
             if ((! id.compare(this->last_id)) || this->last_id.size() == 0) {
                 b_idx = genData->best_left.find(id);
                 if (b_idx == genData->best_left.end()) {
+                    pthread_mutex_lock(&mutex_best_left);
                     genData->best_left.insert(pair<string, size_t>(id, this->left_reads.size()));
+                    pthread_mutex_unlock(&mutex_best_left);
                     curr_alignment.is_best = true;
                     curr_alignment.update_coverage_map(1);
                 }
@@ -354,7 +450,9 @@ char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData
             if ((! id.compare(this->last_id)) || this->last_id.size() == 0) {
                 b_idx = genData->best_right.find(id);
                 if (b_idx == genData->best_right.end()) {
+                    pthread_mutex_lock(&mutex_best_right);
                     genData->best_right.insert(pair<string, size_t>(id, this->right_reads.size()));
+                    pthread_mutex_unlock(&mutex_best_right);
                     curr_alignment.is_best = true;
                     curr_alignment.update_coverage_map(1);
                 }

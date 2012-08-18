@@ -44,11 +44,11 @@ void parse_cigar(string cigar, vector<char> &operations, vector<int> &sizes) {
     }
 }
 
-double intron_penalty(vector<unsigned short> &intron_coverage) {
+double intron_penalty(vector<unsigned int> &intron_coverage) {
     double sum = 0.0;
 
     if (intron_coverage.size() > 0) {
-        for (vector<unsigned short>::iterator it = intron_coverage.begin(); it != intron_coverage.end(); it++) {
+        for (vector<unsigned int>::iterator it = intron_coverage.begin(); it != intron_coverage.end(); it++) {
             sum += (double) *it;
         }
         sum /= (double) intron_coverage.size();
@@ -57,7 +57,7 @@ double intron_penalty(vector<unsigned short> &intron_coverage) {
     return sum;
 }
 
-double get_variance(vector<unsigned short> &exon_coverage, vector<unsigned short> &intron_coverage) {
+double get_variance(vector<unsigned int> &exon_coverage, vector<unsigned int> &intron_coverage) {
 
     if (exon_coverage.size() < 2) {
         return 0.0;
@@ -71,7 +71,7 @@ double get_variance(vector<unsigned short> &exon_coverage, vector<unsigned short
         fprintf(stdout, "\n");*/
         double mean = sum / (double) exon_coverage.size();
         sum = 0.0;
-        for ( vector<unsigned short>::iterator it = exon_coverage.begin(); it != exon_coverage.end(); it++) {
+        for ( vector<unsigned int>::iterator it = exon_coverage.begin(); it != exon_coverage.end(); it++) {
             sum += pow((double) *it - mean, 2.0);
         }
 
@@ -85,9 +85,9 @@ double get_variance(vector<unsigned short> &exon_coverage, vector<unsigned short
     }
 }
 
-vector<unsigned short> alter_coverage(vector<unsigned short> &source, unsigned int window_left, unsigned int window_right, bool is_positive) {
+vector<unsigned int> alter_coverage(vector<unsigned int> &source, unsigned int window_left, unsigned int window_right, bool is_positive) {
 
-    vector<unsigned short> target;
+    vector<unsigned int> target;
 
     for (size_t i = 0; i < source.size(); i++) {
         if (i < window_left || i >= source.size() - window_right) {
@@ -155,22 +155,27 @@ void parse_header(char* sl) {
         else if (idx == 2) {
             tmp_sl = tmp_sl.substr(3, tmp_sl.size());
             genData->chr_size.push_back(atoi(tmp_sl.c_str()));    
-            vector<unsigned short> tmp_cov(genData->chr_size.back(), 0);
+            vector<unsigned int> tmp_cov(genData->chr_size.back(), 0);
             if (conf->verbose) 
-                fprintf(stdout, "\t...reserving memory for contig %s of size %i\n", chr_name.c_str(), genData->chr_size.back());
-            genData->coverage_map.insert( pair<int, vector<unsigned short> >(genData->chr_num[chr_name], tmp_cov) ); 
+                fprintf(stdout, "\t...reserving memory for contig %s (+) of size %i\n", chr_name.c_str(), genData->chr_size.back());
+            genData->coverage_map.insert( pair<pair<unsigned char, unsigned char>, vector<unsigned int> >(pair<unsigned char, unsigned char>(genData->chr_num[chr_name], '+'), tmp_cov) ); 
+            if (conf->strand_specific) {
+                if (conf->verbose) 
+                    fprintf(stdout, "\t...reserving memory for contig %s (-) of size %i\n", chr_name.c_str(), genData->chr_size.back());
+                genData->coverage_map.insert( pair<pair<unsigned char, unsigned char>, vector<unsigned int> >(pair<unsigned char, unsigned char>(genData->chr_num[chr_name], '-'), tmp_cov) ); 
+            }
         }   
         idx ++;
         sl = strtok(NULL, "\t");    
     }
 
-    if (genData->chr_size.size() != genData->chr_num.size() || genData->chr_num.size() != genData->coverage_map.size()) {
+    if (genData->chr_size.size() != genData->chr_num.size() || (!conf->strand_specific && genData->chr_num.size() != genData->coverage_map.size()) || (conf->strand_specific && 2*genData->chr_num.size() != genData->coverage_map.size())) {
         fprintf(stderr, "\nERROR: Header information incomplete!");
         exit(-1);
     }
 }
 
-bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, vector<Alignment>::iterator best_left, vector<Alignment>::iterator best_right, double &loss) {
+bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, vector<Alignment>::iterator best_left, vector<Alignment>::iterator best_right, double &loss, bool debug) {
 
     bool used_mip = false;
     double candidate_loss = 0.0;
@@ -193,34 +198,29 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
     if (conf->use_mip_objective) {
        
         // loss candidate_left
+        // loss best_left
         if (candidate_left == best_left) {
             loss_cl = pair<double, double>(0.0, 0.0);
+            loss_bl = pair<double, double>(0.0, 0.0);
         } else {
-            set_union(genome_pos_bl.begin(), genome_pos_bl.end(), genome_pos_br.begin(), genome_pos_br.end(), inserter(overlap, overlap.begin()));
-            loss_cl = genData->segments.get_exon_segment_loss(candidate_left, overlap, false);
-        }
+            if (candidate_left->chr == best_left->chr)
+                set_intersection(genome_pos_bl.begin(), genome_pos_bl.end(), genome_pos_cl.begin(), genome_pos_cl.end(), inserter(overlap, overlap.begin()));
 
-        // loss candidate_rigth
-        if (candidate_right == best_right) {
-            loss_cr = pair<double, double>(0.0, 0.0);
-        } else {
-            loss_cr = genData->segments.get_exon_segment_loss(candidate_right, overlap, false);
+            loss_cl = genData->segments.get_exon_segment_loss(candidate_left, overlap, debug);
+            loss_bl = genData->segments.get_exon_segment_loss(best_left, overlap, debug);
         }
         overlap.clear();
 
-        // loss best_left
-        if (candidate_left == best_left) {
-            loss_bl = pair<double, double>(0.0, 0.0);
-        } else {
-            set_union(genome_pos_cl.begin(), genome_pos_cl.end(), genome_pos_cr.begin(), genome_pos_cr.end(), inserter(overlap, overlap.begin()));
-            loss_bl = genData->segments.get_exon_segment_loss(best_left, overlap, true);
-        }
-
+        // loss candidate_rigth
         // loss best_right
         if (candidate_right == best_right) {
+            loss_cr = pair<double, double>(0.0, 0.0);
             loss_br = pair<double, double>(0.0, 0.0);
         } else {
-            loss_br = genData->segments.get_exon_segment_loss(best_right, overlap, true);
+            if (candidate_right->chr == best_right->chr)
+                set_intersection(genome_pos_br.begin(), genome_pos_br.end(), genome_pos_cr.begin(), genome_pos_cr.end(), inserter(overlap, overlap.begin()));
+            loss_cr = genData->segments.get_exon_segment_loss(candidate_right, overlap, debug);
+            loss_br = genData->segments.get_exon_segment_loss(best_right, overlap, debug);
         }
         overlap.clear();
 
@@ -229,8 +229,18 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
         if (loss_cl.first >= 0.0 || loss_cr.first >= 0.0 || loss_br.first >= 0.0 || loss_bl.first >= 0.0) {
            used_mip = true;
         }
-        //fprintf(stdout, "cand loss left (w): %f  cand loss right (w): %f best loss left (w): %f best loss right (w):%f\n", loss_cl.first, loss_cr.first, loss_bl.first, loss_br.first);
-        //fprintf(stdout, "cand loss left (wo): %f  cand loss right (wo): %f best loss left (wo): %f best loss right (wo):%f\n\n", loss_cl.second, loss_cr.second, loss_bl.second, loss_br.second);
+        if (debug) {
+            fprintf(stdout, "candidate left:\n");
+            candidate_left->print();
+            fprintf(stdout, "candidate right:\n");
+            candidate_right->print();
+            fprintf(stdout, "best left:\n");
+            best_left->print();
+            fprintf(stdout, "best right:\n");
+            best_right->print();
+            fprintf(stdout, "cand loss left (w): %f  cand loss right (w): %f best loss left (w): %f best loss right (w):%f\n", loss_cl.first, loss_cr.first, loss_bl.first, loss_br.first);
+            fprintf(stdout, "cand loss left (wo): %f  cand loss right (wo): %f best loss left (wo): %f best loss right (wo):%f\n", loss_cl.second, loss_cr.second, loss_bl.second, loss_br.second);
+        }
     }
 
     // if we never were supposed to use the mip objective or did not use it
@@ -239,7 +249,7 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
     if (! conf->use_mip_objective || ! used_mip) {
 
         // loss candidate_left
-        set_union(genome_pos_bl.begin(), genome_pos_bl.end(), genome_pos_br.begin(), genome_pos_br.end(), inserter(already_covered_pos, already_covered_pos.begin()));
+        set_intersection(genome_pos_bl.begin(), genome_pos_bl.end(), genome_pos_br.begin(), genome_pos_br.end(), inserter(already_covered_pos, already_covered_pos.begin()));
         loss_cl = candidate_left->get_variance_loss(already_covered_pos, empty_set);
 
         // loss candidate_rigth
@@ -250,7 +260,7 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
         // loss best_left and loss best_right
         assert(!candidate_left->is_best || !candidate_right->is_best);
         if (!candidate_left->is_best && !candidate_right->is_best) {
-            set_union(genome_pos_cl.begin(), genome_pos_cl.end(), genome_pos_cr.begin(), genome_pos_cr.end(), inserter(not_covered_pos, not_covered_pos.begin()));
+            set_intersection(genome_pos_cl.begin(), genome_pos_cl.end(), genome_pos_cr.begin(), genome_pos_cr.end(), inserter(not_covered_pos, not_covered_pos.begin()));
             loss_bl = best_left->get_variance_loss(empty_set, not_covered_pos);
             loss_br = best_right->get_variance_loss(empty_set, not_covered_pos);
         } else if (candidate_left->is_best) {
@@ -263,14 +273,19 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
     }
 
     // determine total loss
-    candidate_loss +=  (loss_cl.first >= 0.0) ? loss_cl.first : 0;
-    candidate_loss +=  (loss_cr.first >= 0.0) ? loss_cl.first : 0;
-    candidate_loss +=  (loss_bl.second >= 0.0) ? loss_bl.second : 0;
-    candidate_loss +=  (loss_br.second >= 0.0) ? loss_br.second : 0;
-    best_loss +=  (loss_cl.second >= 0.0) ? loss_cl.second : 0;
-    best_loss +=  (loss_cr.second >= 0.0) ? loss_cl.second : 0;
-    best_loss +=  (loss_bl.first >= 0.0) ? loss_bl.first : 0;
-    best_loss +=  (loss_br.first >= 0.0) ? loss_br.first : 0;
+    candidate_loss += (loss_cl.first >= 0.0) ? loss_cl.first : 0.0;
+    candidate_loss += (loss_cr.first >= 0.0) ? loss_cr.first : 0.0;
+    candidate_loss += (loss_bl.second >= 0.0) ? loss_bl.second : 0.0;
+    candidate_loss += (loss_br.second >= 0.0) ? loss_br.second : 0.0;
+    best_loss += (loss_cl.second >= 0.0) ? loss_cl.second : 0.0;
+    best_loss += (loss_cr.second >= 0.0) ? loss_cr.second : 0.0;
+    best_loss += (loss_bl.first >= 0.0) ? loss_bl.first : 0.0;
+    best_loss += (loss_br.first >= 0.0) ? loss_br.first : 0.0;
+    if (debug) {
+        fprintf(stdout, "best loss: %f\n", best_loss);
+        fprintf(stdout, "candidate loss: %f\n", candidate_loss);
+        fprintf(stdout, "delta (best - cand): %f\n", best_loss - candidate_loss);
+    }
  
     if (conf->use_mip_objective && ! used_mip) {
         loss = -1.0;
@@ -280,7 +295,7 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
     return (candidate_loss < best_loss);
 }
 
-bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::iterator best, double &loss) {
+bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::iterator best, double &loss, bool debug) {
 
     bool used_mip = false;
     double candidate_loss = 0.0;
@@ -297,14 +312,23 @@ bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::it
     // we need segments overlapping at least one of the two candidates
     if (conf->use_mip_objective) {
 
-        loss_candidate = genData->segments.get_exon_segment_loss(candidate, genome_pos_best, false);
-        loss_best = genData->segments.get_exon_segment_loss(best, genome_pos_candidate, true);
+        loss_candidate = genData->segments.get_exon_segment_loss(candidate, genome_pos_best, debug);
+        loss_best = genData->segments.get_exon_segment_loss(best, genome_pos_candidate, debug);
 
         // check if any loss is valid
         // first is loss_with and second is loss_without
         if (loss_candidate.first >= 0.0 || loss_best.first >= 0.0) {
             used_mip = true;
         }
+        if (debug) {
+            fprintf(stdout, "candidate (single):\n");
+            candidate->print();
+            fprintf(stdout, "best (single):\n");
+            best->print();
+            fprintf(stdout, "cand loss (w): %f best loss (w): %f\n", loss_candidate.first, loss_best.first);
+            fprintf(stdout, "cand loss (wo): %f best loss (wo): %f\n", loss_candidate.second, loss_best.second);
+        }
+
     }
 
     // if we never were supposed to use the mip objective or did not use it
@@ -387,7 +411,16 @@ void get_plifs_from_file() {
     
 }
 
-double compute_mip_loss(double observed_cov, double predicted_cov) {
+double compute_mip_loss(double observed_cov, double predicted_cov, unsigned long segment_len) {
+
+
+    // in the case of exonic segments, the observed coverage is a count value and the
+    // predicted coverage is a mean that needs to be transfered into counts
+    // in the case of intronic segments, the coverages are already counts, segment_len is 0 then 
+    if (segment_len > 0 && conf->read_len > 0) {
+        predicted_cov *= segment_len / conf->read_len; 
+        observed_cov /= conf->read_len; 
+    }
 
     if (observed_cov > 30000)
         observed_cov = 30000;

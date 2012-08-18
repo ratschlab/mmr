@@ -25,14 +25,18 @@ Config::Config(int argc, char *argv[]) {
             use_variants = true;
         } else if (!strcmp(argv[i], "-p") || !strcmp(argv[i], "--pair-usage")) {
             use_pair_info = true;
+        } else if (!strcmp(argv[i], "-S") || !strcmp(argv[i], "--strand-specific")) {
+            strand_specific = true;
         } else if (!strcmp(argv[i], "-m") || !strcmp(argv[i], "--mip-objective")) {
             use_mip_objective = true;
         } else if (!strcmp(argv[i], "-M") || !strcmp(argv[i], "--mip-variance")) {
             use_mip_variance = true;
+        } else if (!strcmp(argv[i], "-r") || !strcmp(argv[i], "--read-len")) {
+            read_len = (double) atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "--insert-size")) {
             insert_size = (double) atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--insert-dev")) {
-            insert_size = (double) atof(argv[++i]);
+            insert_dev = (double) atof(argv[++i]);
         } else if (!strcmp(argv[i], "-f") || !strcmp(argv[i], "--pre-filter")) {
             pre_filter = true;
         } else if (!strcmp(argv[i], "-P") || !strcmp(argv[i], "--parse-complete")) {
@@ -79,6 +83,7 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\n\tInput handling and paralellization:\n");
     fprintf(stderr, "\t-P --parse-complete \tparse complete file into memory [off]\n");
     fprintf(stderr, "\t-t --threads \t\tnumber of threads to use (must be > 2) [1]\n");
+    fprintf(stderr, "\t-S --strand-specific \talignments are strand specific [off]\n");
     // Filter options
     fprintf(stderr, "\n\tInput file filtering:\n");
     fprintf(stderr, "\t-f --pre-filter \tpre filter all alignments that have F more edit ops than the best [off]\n");
@@ -102,6 +107,7 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-m --mip-objective \tuse objective from MiTie instead of local variance [off]\n");
     fprintf(stderr, "\t-s --segmentfile \tsegment file required for mip optimization []\n");
     fprintf(stderr, "\t-l --lossfile \t\tloss parameter file required for mip optimization []\n");
+    fprintf(stderr, "\t-r --read-len  [INT]\taverage length of the reads [75]\n");
     fprintf(stderr, "\t-M --mip-variance \tuse variance smoothing for regions with no MiTie prediction [off]\n");
     // General options
     fprintf(stderr, "\n\tGeneral:\n");
@@ -109,6 +115,33 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-h --help \t\tprint usage info\n");
 }
 
+void Config::print_call(std::string prog_name) {
+    fprintf(stdout, "%s has been started with the following parameters:\n\n", prog_name.c_str());
+    fprintf(stdout, "\t input file:           %s\n", infile.c_str()); 
+    fprintf(stdout, "\t output file:          %s\n", outfile.c_str()); 
+    fprintf(stdout, "\t strand specific:      %s\n", pre_filter?"yes":"no");
+    fprintf(stdout, "\t pre filter:           %s\n", pre_filter?"on":"off");
+    if (pre_filter) {
+        fprintf(stdout, "\t filter dist:          %i\n", filter_distance);
+        fprintf(stdout, "\t use variants:         %s\n", use_variants?"on":"off");
+    }
+    fprintf(stdout, "\t pair usage:           %s\n", use_pair_info?"on":"off");
+    if (use_pair_info) {
+        fprintf(stdout, "\t insert size:          %.2f\n", insert_size);
+        fprintf(stdout, "\t insert size std dev:  %.2f\n", insert_dev);
+    }
+    fprintf(stdout, "\t print best only:      %s\n", print_best_only?"on":"off");
+    if (use_mip_variance || ! use_mip_objective) {
+        fprintf(stdout, "\t window size:          %i\n", window_size);
+        fprintf(stdout, "\t iterations:           %i\n", iterations);
+    } else {
+        fprintf(stdout, "\t use mip objective:    %s\n", use_mip_objective?"on":"off");
+        fprintf(stdout, "\t segment file:         %s\n", segmentfile.c_str()); 
+        fprintf(stdout, "\t loss file:            %s\n", lossfile.c_str()); 
+        fprintf(stdout, "\t read length:          %i\n", read_len); 
+        fprintf(stdout, "\t use variance if no mip-segment overlaps: %s\n", use_mip_variance?"on":"off");
+    }
+}
 
 // PRIVATE
 void Config::init() {
@@ -118,6 +151,7 @@ void Config::init() {
     pre_filter = false;
     parse_complete = false;
     use_mip_objective = false;
+    strand_specific = false;
     window_size = 20;
     iterations = 5;
     filter_distance = 3;
@@ -130,5 +164,9 @@ void Config::init() {
     use_mip_variance = false;
     segmentfile = string();
     lossfile = string();
+    read_len = 75;
+
+    iteration = 0;
+    last_loss = 0.0;
 }
 
