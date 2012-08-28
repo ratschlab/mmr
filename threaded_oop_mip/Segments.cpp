@@ -211,7 +211,7 @@ pair<double, double> Segments::get_exon_segment_loss(vector<Alignment>::iterator
             unsigned long seg_cov_without = 0;
             //fprintf(stdout, "seg cov: %i affected pos: %i seg len: %i\n", seg_cov, id->second, this->exon_ids[id->first]->length);
             if (debug) 
-                fprintf(stdout, "seg_cov: %lu affected pos: %i overlap_len: %lu\n", seg_cov, id->second.size(), overlap_len);
+                fprintf(stdout, "seg_cov: %lu affected pos: %i overlap_len: %lu\n", seg_cov, (int) id->second.size(), overlap_len);
             
             if (alignment->is_best) {
                 seg_cov_with = seg_cov;
