@@ -376,6 +376,10 @@ set<vector<Alignment>::iterator> filter_alignments(vector<Alignment> &aligns) {
 void get_plifs_from_file() {
     
     FILE* infile = fopen(conf->lossfile.c_str(), "r");    
+	if (!infile){
+		fprintf(stderr, "Could not open file %s for reading!\n", conf->lossfile.c_str());
+		exit(2);
+	}
     char* ret;
     char line[1000];
     int i_count;

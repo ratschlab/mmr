@@ -9,6 +9,10 @@ extern Config* conf;
 
 void Segments::get_from_file() {
     FILE* infile = fopen(conf->segmentfile.c_str(), "r");
+	if (!infile){
+		fprintf(stderr, "Could not open file %s for reading!\n", conf->segmentfile.c_str());
+		exit(2);
+	}
     char* ret;
     char line[1000];
     long segment_id = 0;
