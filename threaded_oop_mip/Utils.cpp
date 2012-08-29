@@ -475,3 +475,61 @@ void prepare_mip_objective() {
             if (conf->verbose) fprintf(stdout, "... done.\n\n");
         }
 }
+
+void add_zero_segments() {
+    
+    if (conf->verbose)
+        fprintf(stdout, "Adding additional segments for covered but not predicted regions ...\n");
+
+    map <pair<unsigned char, unsigned char>, vector<unsigned int> >::iterator it;
+    for (it = genData->coverage_map.begin(); it != genData->coverage_map.end(); it++) {
+        if (conf->verbose)
+            fprintf(stdout, "   ... processing chr %i / %c\n", it->first.first, it->first.second);
+        // get boolean vector of covered positions
+        vector<bool> coverage(it->second.size(), false);
+        for (vector<unsigned int>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++) {
+            coverage.at(distance(it->second.begin(), it2)) = (*it2 > 0);
+        }
+        // set coverage map to false, where we have predicted segments
+        if (genData->segments.exons.find(it->first) != genData->segments.exons.end() && genData->segments.exons[it->first].size() > 1) {
+            
+            for (map<long, long>::iterator it2 = genData->segments.exons[it->first].begin(); it2 != genData->segments.exons[it->first].end(); it2++) {
+                unsigned long start = genData->segments.exon_ids[it2->second]->start;
+                unsigned long end = start + genData->segments.exon_ids[it2->second]->length;
+
+                for (unsigned long i = start; i < end; i++) {
+                    coverage.at(i) = false;
+                }
+            }
+        }
+
+        // infer segments from remaining covered positions
+        unsigned int segment_counter = 0;
+        vector<bool>::iterator uncov_start = coverage.begin();
+        for (vector<bool>::iterator c = coverage.begin(); c != coverage.end(); c++) {
+            if (*c && c != coverage.begin() && !*(c-1)) {
+                long start = distance(coverage.begin(), uncov_start);
+                long length = distance(uncov_start, c) + 1;
+                Segment* seg = new Segment(start, length, it->first.first, it->first.second, 0.0);
+                long segment_id = genData->segments.exon_ids.size() + genData->segments.introns_by_ids.size();
+                if (genData->segments.exons.find(it->first) != genData->segments.exons.end()) {
+                    genData->segments.exons[it->first].insert(pair<long, long>(start, segment_id));
+                    genData->segments.exons[it->first].insert(pair<long, long>(start + length - 1, segment_id));
+                } else {
+                    map<long, long> tmp_map;
+                    tmp_map.insert(pair<long, long>(start, segment_id));
+                    tmp_map.insert(pair<long, long>(start + length - 1, segment_id));
+                    genData->segments.exons.insert(pair<pair<unsigned char, unsigned char>, map<long, long> >(it->first, tmp_map));
+                }
+                genData->segments.exon_ids.insert(pair<long, Segment*>(segment_id, seg));
+                segment_counter++;
+            } else if (!*c && (*(c-1) || c == coverage.begin())) {
+                uncov_start = c;
+            }
+        }
+        if (conf->verbose)
+            fprintf(stdout, "   ... added %i segments\n", segment_counter);
+    }
+    if (conf->verbose)
+        fprintf(stdout, "... done.\n\n");
+}

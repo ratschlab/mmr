@@ -25,6 +25,7 @@ class Config {
         bool use_mip_objective;
         bool use_mip_variance;
         bool strand_specific;
+        bool zero_unpred;
         
         unsigned int window_size;
         unsigned int iterations;

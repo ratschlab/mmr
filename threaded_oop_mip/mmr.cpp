@@ -415,19 +415,22 @@ int main(int argc, char *argv[]) {
             string last_id = string("");
             // fill FIFO
             while ((ret = data->parse_file(infile, last_line, genData, counter)) || data->left_reads.size() > 0 || data->right_reads.size() > 0) {
-
-                if (conf->num_threads < 2) {
-                    data->process_data_online(genData);
-                } else {
-                    pthread_mutex_lock (&mutex_fifo);
-                    if (fifo.size() >= conf->max_fifo_size) pthread_cond_wait(&fifo_is_full, &mutex_fifo);
-                    fifo.push(data);
-                    pthread_mutex_unlock (&mutex_fifo);
+                
+                // check if we use the first pass only to fill coverager map and infer zero predicted segments
+                if (iteration > 0 || !conf->zero_unpred) {
+                    if (conf->num_threads < 2) {
+                        data->process_data_online(genData);
+                    } else {
+                        pthread_mutex_lock (&mutex_fifo);
+                        if (fifo.size() >= conf->max_fifo_size) pthread_cond_wait(&fifo_is_full, &mutex_fifo);
+                        fifo.push(data);
+                        pthread_mutex_unlock (&mutex_fifo);
+                    }
                 }
                 
                 if (!ret)
                     break;
-                else
+                else if (iteration > 0 || !conf->zero_unpred)
                     data = new OnlineData();
             }
 
@@ -442,6 +445,10 @@ int main(int argc, char *argv[]) {
                    pthread_join(threads[tid], NULL); 
                 }
                 delete[] threads;
+            }
+
+            if (iteration == 0 && conf->zero_unpred) {
+               add_zero_segments(); 
             }
 
             if (conf->verbose) { 

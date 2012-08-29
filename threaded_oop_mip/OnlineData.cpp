@@ -81,7 +81,7 @@ void OnlineData::process_data_online(GeneralData* genData) {
         assert(best_found);
 
         bool changed = false;
-        double new_total_loss = 0.0;
+        //double new_total_loss = 0.0;
         for(lv_idx = active_left_reads.begin(), rv_idx = active_right_reads.begin(); lv_idx != active_left_reads.end() && rv_idx != active_right_reads.end(); lv_idx++, rv_idx++) {
             if ((*lv_idx) == best_left_idx && (*rv_idx) == best_right_idx)
                 continue;
@@ -159,6 +159,9 @@ void OnlineData::process_data_online(GeneralData* genData) {
             }
         }
         if (active_left_reads.size() > 0)
+            if (!best_found) {
+                fprintf(stderr, "The given input file is most probably not sorted by read-ID! Bailing out. \n");
+            }
             assert(best_found);
         bool changed = false;
         for (lv_idx = active_left_reads.begin(); lv_idx != active_left_reads.end(); lv_idx++) {

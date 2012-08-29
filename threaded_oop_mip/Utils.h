@@ -43,4 +43,6 @@ double compute_mip_loss(double observed_cov, double predicted_cov, unsigned long
 
 void prepare_mip_objective();
 
+void add_zero_segments();
+
 #endif

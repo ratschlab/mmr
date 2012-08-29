@@ -54,6 +54,8 @@ Config::Config(int argc, char *argv[]) {
             exit(0);
         } else if (!strcmp(argv[i], "-o")) {
             outfile = std::string(argv[++i]);
+        } else if (!strcmp(argv[i], "-z") || !strcmp(argv[i], "--zero-expect-unpred")) {
+            zero_unpred = true;
         } else if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "--segmentfile")) {
             segmentfile = std::string(argv[++i]);
         } else if (!strcmp(argv[i], "-l") || !strcmp(argv[i], "--lossfile")) {
@@ -109,6 +111,7 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-l --lossfile \t\tloss parameter file required for mip optimization []\n");
     fprintf(stderr, "\t-r --read-len  [INT]\taverage length of the reads [75]\n");
     fprintf(stderr, "\t-M --mip-variance \tuse variance smoothing for regions with no MiTie prediction [off]\n");
+    fprintf(stderr, "\t-z --zero-expect-unpred \tinitializes all covered but not predicted positions with expectation 0.0 [off]\n");
     // General options
     fprintf(stderr, "\n\tGeneral:\n");
     fprintf(stderr, "\t-v --verbose \t\tswitch on verbose output [off]\n");
@@ -139,6 +142,7 @@ void Config::print_call(std::string prog_name) {
         fprintf(stdout, "\t segment file:         %s\n", segmentfile.c_str()); 
         fprintf(stdout, "\t loss file:            %s\n", lossfile.c_str()); 
         fprintf(stdout, "\t read length:          %i\n", read_len); 
+        fprintf(stdout, "\t zero for unpred seg:  %s\n", zero_unpred?"yes":"no");
         fprintf(stdout, "\t use variance if no mip-segment overlaps: %s\n", use_mip_variance?"on":"off");
     }
 }
@@ -165,6 +169,7 @@ void Config::init() {
     segmentfile = string();
     lossfile = string();
     read_len = 75;
+    zero_unpred = false;
 
     iteration = 0;
     last_loss = 0.0;
