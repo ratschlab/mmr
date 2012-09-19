@@ -17,7 +17,9 @@ struct GeneralData {
     vector <unsigned int> chr_size;
     map <pair<unsigned char, unsigned char>, vector<unsigned int> > coverage_map; // contains coverage vector for each chr/strand pair
 
-    // intron coverage map (will only be used for MIP optimization)
+    // intron coverage map (will only be used for Mitie optimization)
+    // outer map: keys -> chr/strand pair  values -> intron map
+    // inner map: keys -> start/end pair (closed interval)  values -> coverages
     map <pair<unsigned char, unsigned char>, map< pair<unsigned long, unsigned long>, unsigned int> > intron_coverage_map;
 
     // best hit maps (will stay empty for batch setting)

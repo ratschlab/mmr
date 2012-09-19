@@ -478,11 +478,11 @@ void prepare_mip_objective() {
 
 void add_zero_segments() {
     
+    // handle missing exonic segments
     if (conf->verbose)
-        fprintf(stdout, "Adding additional segments for covered but not predicted regions ...\n");
+        fprintf(stdout, "Adding additional exonic segments for covered but not predicted regions ...\n");
 
-    map <pair<unsigned char, unsigned char>, vector<unsigned int> >::iterator it;
-    for (it = genData->coverage_map.begin(); it != genData->coverage_map.end(); it++) {
+    for (map <pair<unsigned char, unsigned char>, vector<unsigned int> >::iterator it = genData->coverage_map.begin(); it != genData->coverage_map.end(); it++) {
         if (conf->verbose)
             fprintf(stdout, "   ... processing chr %i / %c\n", it->first.first, it->first.second);
         // get boolean vector of covered positions
@@ -521,6 +521,7 @@ void add_zero_segments() {
                     tmp_map.insert(pair<long, long>(start + length - 1, segment_id));
                     genData->segments.exons.insert(pair<pair<unsigned char, unsigned char>, map<long, long> >(it->first, tmp_map));
                 }
+                fprintf(stdout, "start: %i  end:%i \n", start, start + length - 1);
                 genData->segments.exon_ids.insert(pair<long, Segment*>(segment_id, seg));
                 segment_counter++;
             } else if (!*c && (*(c-1) || c == coverage.begin())) {
@@ -529,6 +530,51 @@ void add_zero_segments() {
         }
         if (conf->verbose)
             fprintf(stdout, "   ... added %i segments\n", segment_counter);
+    }
+    if (conf->verbose)
+        fprintf(stdout, "... done.\n\n");
+
+    // handle missing intronic segments
+    if (conf->verbose)
+        fprintf(stdout, "Adding additional intronic segments for covered but not predicted regions ...\n");
+
+    for (map <pair<unsigned char, unsigned char>, map< pair<unsigned long, unsigned long>, unsigned int> >::iterator it = genData->intron_coverage_map.begin(); it != genData->intron_coverage_map.end(); it++) {
+        if (conf->verbose)
+            fprintf(stdout, "   ... processing chr %i / %c\n", it->first.first, it->first.second);
+
+        if (genData->segments.introns.find(it->first) != genData->segments.introns.end()) {
+            unsigned int segment_counter = 0;
+            for (map< pair<unsigned long, unsigned long>, unsigned int>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++) {
+                // the following gives the same result as equal_range, but is a bit more clear to read
+                multimap<unsigned long, unsigned long>::iterator it3 = genData->segments.introns[it->first].lower_bound(it2->first.first);
+                multimap<unsigned long, unsigned long>::iterator it4 = genData->segments.introns[it->first].upper_bound(it2->first.first);
+                bool found = false;
+                for (it3; it3 != it4; it3++) {
+                    assert(genData->segments.introns_by_ids[it3->second]->start == it3->first);
+                    if (genData->segments.introns_by_ids[it3->second]->start + genData->segments.introns_by_ids[it3->second]->length - 1 == it2->first.second) {
+                        found = true;
+                        break;
+                    }
+                }
+                // add new intronic segment
+                if (!found) {
+                    long intron_id = genData->segments.exon_ids.size() + genData->segments.introns_by_ids.size();
+                    Segment* seg = new Segment(it3->first, it3->second - it3->first + 1, it->first.first, it->first.second, 0.0);
+                    if (genData->segments.introns.find(it->first) != genData->segments.introns.end()) {
+                        genData->segments.introns[it->first].insert(pair<long, long>(it3->first, intron_id));
+                    } else {
+                        multimap<unsigned long, unsigned long> tmp_map;
+                        tmp_map.insert(pair<unsigned long, unsigned long>(it3->first, intron_id));
+                        genData->segments.introns.insert(pair<pair<unsigned char, unsigned char>, multimap<unsigned long, unsigned long> >(it->first, tmp_map));
+                    }
+                    genData->segments.introns_by_ids.insert(pair<long, Segment*>(intron_id, seg));
+                    segment_counter++;
+                }
+            }
+            if (conf->verbose)
+                fprintf(stdout, "   ... added %i segments\n", segment_counter);
+        }
+
     }
     if (conf->verbose)
         fprintf(stdout, "... done.\n\n");

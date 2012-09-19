@@ -308,7 +308,7 @@ double Segments::get_total_loss() {
     }
 
     // get total intron segment loss
-    for (map<long, Segment*>::iterator it = this->introns_by_ids.begin(); it != this->introns_by_ids.end(); it++) {
+    for (map<unsigned long, Segment*>::iterator it = this->introns_by_ids.begin(); it != this->introns_by_ids.end(); it++) {
         pair<unsigned char, unsigned char> cov_chr = pair<unsigned char, unsigned char>(it->second->chr, it->second->strand);
         map< pair<unsigned long, unsigned long>, unsigned int>::iterator i_cov = genData->intron_coverage_map[cov_chr].find(pair<unsigned long, unsigned long>(it->second->start, it->second->start + it->second->length - 1));
         double curr_loss = 0.;
