@@ -34,7 +34,8 @@ public:
     string fill(char* sl, unsigned char &pair);
 
     //pair<double, double> get_variance_loss(set<unsigned long> overlap_region);
-    pair<double, double> get_variance_loss(set<unsigned long> covered_pos, set<unsigned long> not_covered_pos);
+    //pair<double, double> get_variance_loss(set<unsigned long> covered_pos, set<unsigned long> not_covered_pos);
+    pair<double, double> get_variance_loss(set<unsigned long> covered_pos, set<unsigned long> not_covered_pos, set<unsigned long> mate_covered_pos, bool mate_is_best);
 
     void update_coverage_map(bool positive);
     unsigned long get_end();
@@ -49,7 +50,7 @@ public:
 
     set<unsigned long> get_overlap(Alignment &other);
 
-    set<unsigned long> get_genome_pos();
+    set<unsigned long> get_genome_pos(unsigned int window_size = 0);
 
     void clear();
     

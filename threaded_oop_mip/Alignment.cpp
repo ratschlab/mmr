@@ -60,7 +60,7 @@ string Alignment::fill(char* sl, unsigned char &pair) {
     return id;
 }
 
-pair<double, double> Alignment::get_variance_loss(set<unsigned long> covered_pos, set<unsigned long> not_covered_pos) {
+pair<double, double> Alignment::get_variance_loss(set<unsigned long> covered_pos, set<unsigned long> not_covered_pos, set<unsigned long> mate_covered_pos, bool mate_is_best) {
 
     vector<unsigned int>::iterator cov_idx = genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].begin();
     vector<unsigned int>::iterator intron_cov_idx;
@@ -72,6 +72,7 @@ pair<double, double> Alignment::get_variance_loss(set<unsigned long> covered_pos
     unsigned long genome_pos = 0;
     unsigned int adjust_up = 0;
     unsigned int adjust_down = 0;
+    unsigned int adjust_mate = 0;
     unsigned int offset = (conf->window_size >= this->start)?this->start:conf->window_size;
     size_t step_size = 1;
 
@@ -86,8 +87,15 @@ pair<double, double> Alignment::get_variance_loss(set<unsigned long> covered_pos
         if (cov_idx < genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].end()) {
             adjust_up = (not_covered_pos.find(genome_pos) != not_covered_pos.end()) ? 1 : 0;
             adjust_down = (covered_pos.find(genome_pos) != covered_pos.end()) ? 1 : 0;
-            exon_cov_with.push_back((*cov_idx) - adjust_down);
-            exon_cov_without.push_back((*cov_idx) + adjust_up);
+            adjust_mate = (mate_covered_pos.find(genome_pos) != mate_covered_pos.end()) ? 1 : 0;
+            if (this->is_best && mate_is_best) {
+                exon_cov_with.push_back((*cov_idx) - adjust_down);
+                exon_cov_without.push_back((*cov_idx) + adjust_up - adjust_mate);
+            } else {
+                adjust_mate = mate_is_best ? 0 : adjust_mate;
+                exon_cov_with.push_back((*cov_idx) - adjust_down + adjust_mate);
+                exon_cov_without.push_back((*cov_idx) + adjust_up);
+            }
             cov_idx++;
             genome_pos++;
         } else {
@@ -103,9 +111,12 @@ pair<double, double> Alignment::get_variance_loss(set<unsigned long> covered_pos
                                         adjust_up = (not_covered_pos.find(genome_pos) != not_covered_pos.end()) ? 1 : 0;
                                         adjust_down = (covered_pos.find(genome_pos) != covered_pos.end()) ? 1 : 0;
 
-                                        if (this->is_best) {
+                                        if (this->is_best && mate_is_best) {
                                             exon_cov_with.push_back(*cov_idx);
                                             exon_cov_without.push_back(max((unsigned int) 0, (*cov_idx) - 1 + adjust_up));
+                                        } else if (this->is_best) { // it means this is the candidate in the pair case and does not change
+                                            exon_cov_with.push_back(*cov_idx);
+                                            exon_cov_without.push_back(*cov_idx);
                                         } else {
                                             exon_cov_with.push_back((*cov_idx) + 1 - adjust_down);
                                             exon_cov_without.push_back(*cov_idx);
@@ -119,12 +130,9 @@ pair<double, double> Alignment::get_variance_loss(set<unsigned long> covered_pos
             case 'N': { step_size = max(this->sizes.at(i) / 50, 1);
                         for (int j = conf->intron_offset; j < this->sizes.at(i) - conf->intron_offset; j += step_size) {
                             if (intron_cov_idx < genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].end()) {
-                                adjust_down = (covered_pos.find(genome_pos) != covered_pos.end()) ? 1 : 0;
+                                adjust_down = (covered_pos.find(genome_pos + j) != covered_pos.end()) ? 1 : 0;
                                 intron_cov_idx = cov_idx + j;
-                                if (this->is_best)
-                                    intron_cov.push_back((*intron_cov_idx) - adjust_down); 
-                                else
-                                    intron_cov.push_back((*intron_cov_idx) - adjust_down); 
+                                intron_cov.push_back((*intron_cov_idx) - adjust_down); 
                             }
                         }; 
                         cov_idx += this->sizes.at(i);
@@ -139,8 +147,15 @@ pair<double, double> Alignment::get_variance_loss(set<unsigned long> covered_pos
         if (cov_idx < genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].end()) {
             adjust_up = (not_covered_pos.find(genome_pos) != not_covered_pos.end()) ? 1 : 0;
             adjust_down = (covered_pos.find(genome_pos) != covered_pos.end()) ? 1 : 0;
-            exon_cov_with.push_back((*cov_idx) - adjust_down);
-            exon_cov_without.push_back((*cov_idx) + adjust_up);
+            adjust_mate = (mate_covered_pos.find(genome_pos) != mate_covered_pos.end()) ? 1 : 0;
+            if (this->is_best && mate_is_best) {
+                exon_cov_with.push_back((*cov_idx) - adjust_down);
+                exon_cov_without.push_back((*cov_idx) + adjust_up - adjust_mate);
+            } else {
+                adjust_mate = mate_is_best ? 0 : adjust_mate;
+                exon_cov_with.push_back((*cov_idx) - adjust_down + adjust_mate);
+                exon_cov_without.push_back((*cov_idx) + adjust_up);
+            }
             cov_idx++;
             genome_pos++;
         }
@@ -286,10 +301,15 @@ set<unsigned long> Alignment::get_overlap(Alignment &other) {
     return overlap;
 }
 
-set<unsigned long> Alignment::get_genome_pos() {
+set<unsigned long> Alignment::get_genome_pos(unsigned int window_size) {
 
     set<unsigned long> position_set;
 
+    /*if (window_size > 0) {
+        for (unsigned long i = max(0, this->start - window_size); i < this->start; i++) {
+            position_set.insert(i);
+        }
+    }*/
     unsigned long genome_pos = this->start;
     for (size_t i = 0; i < this->operations.size(); i++) {
         if (this->operations.at(i) == 'M' || this->operations.at(i) == 'D') {
@@ -300,6 +320,11 @@ set<unsigned long> Alignment::get_genome_pos() {
             genome_pos += this->sizes.at(i);
         }
     }
+    /*if (window_size > 0) {
+        for (unsigned long i = genome_pos; i < genData->chr_size.at(this->chr); i++) {
+            position_set.insert(i);
+        }
+    }*/
 
     return position_set;
 }

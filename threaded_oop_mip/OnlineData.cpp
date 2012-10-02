@@ -158,11 +158,11 @@ void OnlineData::process_data_online(GeneralData* genData) {
                 break;
             }
         }
-        if (active_left_reads.size() > 0)
-            if (!best_found) {
+        if (active_left_reads.size() > 0) {
+            if (!best_found)
                 fprintf(stderr, "The given input file is most probably not sorted by read-ID! Bailing out. \n");
-            }
             assert(best_found);
+        }
         bool changed = false;
         for (lv_idx = active_left_reads.begin(); lv_idx != active_left_reads.end(); lv_idx++) {
             if (*lv_idx == *curr_best)
@@ -177,7 +177,7 @@ void OnlineData::process_data_online(GeneralData* genData) {
                 *curr_best = *lv_idx;          
                 (*curr_best)->is_best = true;
                 (*curr_best)->update_coverage_map(1);
-        /*        if (conf->iteration > 0) {
+                /*if (conf->iteration > 0) {
                     double new_total_loss = genData->segments.get_total_loss();
                     if (new_total_loss > conf->last_loss) {
                         // do rollback
@@ -225,8 +225,11 @@ void OnlineData::process_data_online(GeneralData* genData) {
                 break;
             }
         }
-        if (active_right_reads.size() > 0)
+        if (active_right_reads.size() > 0) {
+            if (!best_found)
+                fprintf(stderr, "The given input file is most probably not sorted by read-ID! Bailing out. \n");
             assert(best_found);
+        }
         changed = false;
         min_loss = numeric_limits<double>::max();
         for (rv_idx = active_right_reads.begin(); rv_idx != active_right_reads.end(); rv_idx++) {
@@ -310,8 +313,7 @@ void OnlineData::get_active_reads(string read_id, set<vector<Alignment>::iterato
                     insert1 = abs((double) lv_idx->get_end() - (double) rv_idx->start);
                     insert2 = abs((double) rv_idx->get_end() - (double) lv_idx->start);
                     if (insert1 <= (conf->insert_size * (1.0 + conf->insert_dev)) || insert2 <= (conf->insert_size * (1.0 + conf->insert_dev))) {
-                        if (! best_pair) 
-                            best_pair = (lv_idx->is_best && rv_idx->is_best);
+                        best_pair = best_pair ? best_pair : (lv_idx->is_best && rv_idx->is_best);
                         active_left_reads.push_back(lv_idx);
                         active_right_reads.push_back(rv_idx);
                         found_pairs = true;

@@ -20,7 +20,12 @@ FILE* open_bam_pipe_in(std::string & in_fname)
 	string command = string("/fml/ag-raetsch/share/software/samtools-0.1.7a/samtools view -h 2> /dev/null ") + in_fname  + " && echo samtools subprocess for reading terminated successfully";
 	FILE* IN_FP=NULL ;
 	fflush(stdout) ;
-	IN_FP = popen(command.c_str(), "r") ;
+    for (int i = 0; i < 10; i++) {
+        IN_FP = popen(command.c_str(), "r") ;
+        if (IN_FP)
+            break;
+        sleep(1);
+    }
 	return IN_FP ;
 }
 
@@ -64,7 +69,7 @@ double get_variance(vector<unsigned int> &exon_coverage, vector<unsigned int> &i
     } else {
         double sum = 0.0;
         double int_pnlty = 0.0;
-/*        for ( vector<unsigned short>::iterator it = exon_coverage.begin(); it != exon_coverage.end(); it++) {
+        /*for ( vector<unsigned int>::iterator it = exon_coverage.begin(); it != exon_coverage.end(); it++) {
             sum += (double) *it;
             fprintf(stdout, "%i ", *it);
         }
@@ -79,8 +84,7 @@ double get_variance(vector<unsigned int> &exon_coverage, vector<unsigned int> &i
             int_pnlty = intron_penalty(intron_coverage);
         }
         
-        //fprintf(stdout, "var: %f, intron: %f\n", (sum / ((double) exon_coverage.size() - 1.0)), int_pnlty);
-        // TODO
+       // fprintf(stdout, "var: %f, intron: %f\n", (sum / ((double) exon_coverage.size() - 1.0)), int_pnlty);
         return (sum / ((double) exon_coverage.size() - 1.0)) + int_pnlty;  
     }
 }
@@ -229,18 +233,6 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
         if (loss_cl.first >= 0.0 || loss_cr.first >= 0.0 || loss_br.first >= 0.0 || loss_bl.first >= 0.0) {
            used_mip = true;
         }
-        if (debug) {
-            fprintf(stdout, "candidate left:\n");
-            candidate_left->print();
-            fprintf(stdout, "candidate right:\n");
-            candidate_right->print();
-            fprintf(stdout, "best left:\n");
-            best_left->print();
-            fprintf(stdout, "best right:\n");
-            best_right->print();
-            fprintf(stdout, "cand loss left (w): %f  cand loss right (w): %f best loss left (w): %f best loss right (w):%f\n", loss_cl.first, loss_cr.first, loss_bl.first, loss_br.first);
-            fprintf(stdout, "cand loss left (wo): %f  cand loss right (wo): %f best loss left (wo): %f best loss right (wo):%f\n", loss_cl.second, loss_cr.second, loss_bl.second, loss_br.second);
-        }
     }
 
     // if we never were supposed to use the mip objective or did not use it
@@ -248,28 +240,49 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
     // to the total loss for mip-objective
     if (! conf->use_mip_objective || ! used_mip) {
 
+        // get all positions that are covered by the current best pair
+        set <unsigned long> tmp_set;
+        //set_union(genome_pos_bl.begin(), genome_pos_bl.end(), genome_pos_br.begin(), genome_pos_br.end(), inserter(already_covered_pos, already_covered_pos.begin()));
+        set_union(genome_pos_bl.begin(), genome_pos_bl.end(), genome_pos_br.begin(), genome_pos_br.end(), inserter(tmp_set, tmp_set.begin()));
+        // but not by the candidate mate, if it is not best itself
+        if (candidate_right->is_best) 
+            set_difference(tmp_set.begin(), tmp_set.end(), genome_pos_cr.begin(), genome_pos_cr.end(), inserter(already_covered_pos, already_covered_pos.begin()));
+        else
+            already_covered_pos = tmp_set;
         // loss candidate_left
-        set_intersection(genome_pos_bl.begin(), genome_pos_bl.end(), genome_pos_br.begin(), genome_pos_br.end(), inserter(already_covered_pos, already_covered_pos.begin()));
-        loss_cl = candidate_left->get_variance_loss(already_covered_pos, empty_set);
+        loss_cl = candidate_left->get_variance_loss(already_covered_pos, empty_set, genome_pos_cr, candidate_right->is_best);
 
+        // but not by the candidate mate
+        if (candidate_left->is_best) {
+            already_covered_pos.clear();
+            set_difference(tmp_set.begin(), tmp_set.end(), genome_pos_cl.begin(), genome_pos_cl.end(), inserter(already_covered_pos, already_covered_pos.begin()));
+        } else {
+            already_covered_pos = tmp_set;
+        }
         // loss candidate_rigth
-        loss_cr = candidate_right->get_variance_loss(already_covered_pos, empty_set);
+        loss_cr = candidate_right->get_variance_loss(already_covered_pos, empty_set, genome_pos_cl, candidate_left->is_best);
         already_covered_pos.clear();
         not_covered_pos.clear();
 
         // loss best_left and loss best_right
-        assert(!candidate_left->is_best || !candidate_right->is_best);
-        if (!candidate_left->is_best && !candidate_right->is_best) {
-            set_intersection(genome_pos_cl.begin(), genome_pos_cl.end(), genome_pos_cr.begin(), genome_pos_cr.end(), inserter(not_covered_pos, not_covered_pos.begin()));
-            loss_bl = best_left->get_variance_loss(empty_set, not_covered_pos);
-            loss_br = best_right->get_variance_loss(empty_set, not_covered_pos);
-        } else if (candidate_left->is_best) {
-            loss_bl = best_left->get_variance_loss(genome_pos_cl, genome_pos_cr);
-            loss_br = best_right->get_variance_loss(genome_pos_cl, genome_pos_cr);
+       // assert(!candidate_left->is_best || !candidate_right->is_best);
+      //  if (!candidate_left->is_best && !candidate_right->is_best) {
+            set_union(genome_pos_cl.begin(), genome_pos_cl.end(), genome_pos_cr.begin(), genome_pos_cr.end(), inserter(not_covered_pos, not_covered_pos.begin()));
+            loss_bl = best_left->get_variance_loss(empty_set, not_covered_pos, genome_pos_br, true);
+            loss_br = best_right->get_variance_loss(empty_set, not_covered_pos, genome_pos_bl, true);
+        /*} else if (candidate_left->is_best) {
+            assert(candidate_left == best_left);
+            fprintf(stdout, "best_left\n");
+            loss_bl = best_left->get_variance_loss(genome_pos_cl, genome_pos_cr, genome_pos_br, true);
+            fprintf(stdout, "best_right\n");
+            loss_br = best_right->get_variance_loss(genome_pos_cl, genome_pos_cr, genome_pos_bl, true);
         } else if (candidate_right->is_best) {
-            loss_bl = best_left->get_variance_loss(genome_pos_cr, genome_pos_cl);
-            loss_br = best_right->get_variance_loss(genome_pos_cr, genome_pos_cl);
-        }
+            assert(candidate_right == best_right);
+            fprintf(stdout, "best_left\n");
+            loss_bl = best_left->get_variance_loss(genome_pos_cr, genome_pos_cl, genome_pos_br, true);
+            fprintf(stdout, "best_right\n");
+            loss_br = best_right->get_variance_loss(genome_pos_cr, genome_pos_cl, genome_pos_bl, true);
+        }*/
     }
 
     // determine total loss
@@ -282,6 +295,16 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
     best_loss += (loss_bl.first >= 0.0) ? loss_bl.first : 0.0;
     best_loss += (loss_br.first >= 0.0) ? loss_br.first : 0.0;
     if (debug) {
+        fprintf(stdout, "candidate left:\n");
+        candidate_left->print();
+        fprintf(stdout, "candidate right:\n");
+        candidate_right->print();
+        fprintf(stdout, "best left:\n");
+        best_left->print();
+        fprintf(stdout, "best right:\n");
+        best_right->print();
+        fprintf(stdout, "cand loss left (w): %f  cand loss right (w): %f best loss left (w): %f best loss right (w):%f\n", loss_cl.first, loss_cr.first, loss_bl.first, loss_br.first);
+        fprintf(stdout, "cand loss left (wo): %f  cand loss right (wo): %f best loss left (wo): %f best loss right (wo):%f\n", loss_cl.second, loss_cr.second, loss_bl.second, loss_br.second);
         fprintf(stdout, "best loss: %f\n", best_loss);
         fprintf(stdout, "candidate loss: %f\n", candidate_loss);
         fprintf(stdout, "delta (best - cand): %f\n", best_loss - candidate_loss);
@@ -336,8 +359,8 @@ bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::it
     // to the total loss for mip-objective
     if (! conf->use_mip_objective || ! used_mip) {
 
-        loss_candidate = candidate->get_variance_loss(genome_pos_best, empty_set);
-        loss_best = best->get_variance_loss(empty_set, genome_pos_candidate);
+        loss_candidate = candidate->get_variance_loss(genome_pos_best, empty_set, empty_set, false);
+        loss_best = best->get_variance_loss(empty_set, genome_pos_candidate, empty_set, true);
     }
 
     candidate_loss +=  (loss_candidate.first >= 0.0) ? loss_candidate.first : 0;
@@ -493,21 +516,34 @@ void add_zero_segments() {
         // set coverage map to false, where we have predicted segments
         if (genData->segments.exons.find(it->first) != genData->segments.exons.end() && genData->segments.exons[it->first].size() > 1) {
             
+            set<long> processed_ids;
             for (map<long, long>::iterator it2 = genData->segments.exons[it->first].begin(); it2 != genData->segments.exons[it->first].end(); it2++) {
+                if (processed_ids.find(it2->second) != processed_ids.end())
+                    continue;
                 unsigned long start = genData->segments.exon_ids[it2->second]->start;
                 unsigned long end = start + genData->segments.exon_ids[it2->second]->length;
 
                 for (unsigned long i = start; i < end; i++) {
                     coverage.at(i) = false;
                 }
+                processed_ids.insert(it2->second);
             }
         }
 
         // infer segments from remaining covered positions
         unsigned int segment_counter = 0;
         vector<bool>::iterator uncov_start = coverage.begin();
+        bool in_segment = false;
         for (vector<bool>::iterator c = coverage.begin(); c != coverage.end(); c++) {
-            if (*c && c != coverage.begin() && !*(c-1)) {
+            if (*c && in_segment)
+                continue;
+            else if (*c && ! in_segment) {
+                in_segment = true;
+                uncov_start = c;
+            }
+            else if (!*c && ! in_segment)
+                continue;
+            else {
                 long start = distance(coverage.begin(), uncov_start);
                 long length = distance(uncov_start, c) + 1;
                 Segment* seg = new Segment(start, length, it->first.first, it->first.second, 0.0);
@@ -521,11 +557,10 @@ void add_zero_segments() {
                     tmp_map.insert(pair<long, long>(start + length - 1, segment_id));
                     genData->segments.exons.insert(pair<pair<unsigned char, unsigned char>, map<long, long> >(it->first, tmp_map));
                 }
-                fprintf(stdout, "start: %i  end:%i \n", start, start + length - 1);
+                //fprintf(stdout, "start: %i  end:%i \n", start, start + length - 1);
                 genData->segments.exon_ids.insert(pair<long, Segment*>(segment_id, seg));
                 segment_counter++;
-            } else if (!*c && (*(c-1) || c == coverage.begin())) {
-                uncov_start = c;
+                in_segment = false;
             }
         }
         if (conf->verbose)
@@ -538,41 +573,56 @@ void add_zero_segments() {
     if (conf->verbose)
         fprintf(stdout, "Adding additional intronic segments for covered but not predicted regions ...\n");
 
-    for (map <pair<unsigned char, unsigned char>, map< pair<unsigned long, unsigned long>, unsigned int> >::iterator it = genData->intron_coverage_map.begin(); it != genData->intron_coverage_map.end(); it++) {
+    // iterate over introns found in the alignment file
+    for (map <pair<unsigned char, unsigned char>, map< pair<unsigned long, unsigned long>, unsigned int> >::iterator curr_chr = genData->intron_coverage_map.begin(); curr_chr != genData->intron_coverage_map.end(); curr_chr++) {
         if (conf->verbose)
-            fprintf(stdout, "   ... processing chr %i / %c\n", it->first.first, it->first.second);
+            fprintf(stdout, "   ... processing chr %i / %c\n", curr_chr->first.first, curr_chr->first.second);
 
-        if (genData->segments.introns.find(it->first) != genData->segments.introns.end()) {
-            unsigned int segment_counter = 0;
-            for (map< pair<unsigned long, unsigned long>, unsigned int>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++) {
+        unsigned int segment_counter = 0;
+        // check if we have annotated segments for current chromosome
+        if (genData->segments.introns.find(curr_chr->first) != genData->segments.introns.end()) {
+            // iterate over all alignment-introns of current chr/strand-pair
+            for (map< pair<unsigned long, unsigned long>, unsigned int>::iterator aln_int = curr_chr->second.begin(); aln_int != curr_chr->second.end(); aln_int++) {
                 // the following gives the same result as equal_range, but is a bit more clear to read
-                multimap<unsigned long, unsigned long>::iterator it3 = genData->segments.introns[it->first].lower_bound(it2->first.first);
-                multimap<unsigned long, unsigned long>::iterator it4 = genData->segments.introns[it->first].upper_bound(it2->first.first);
+                multimap<unsigned long, unsigned long>::iterator range_pos = genData->segments.introns[curr_chr->first].lower_bound(aln_int->first.first);
+                multimap<unsigned long, unsigned long>::iterator range_end = genData->segments.introns[curr_chr->first].upper_bound(aln_int->first.first);
                 bool found = false;
-                for (it3; it3 != it4; it3++) {
-                    assert(genData->segments.introns_by_ids[it3->second]->start == it3->first);
-                    if (genData->segments.introns_by_ids[it3->second]->start + genData->segments.introns_by_ids[it3->second]->length - 1 == it2->first.second) {
+                for (range_pos; range_pos != range_end; range_pos++) {
+                    assert(genData->segments.introns_by_ids[range_pos->second]->start == range_pos->first);
+                    // match coordinates of aln_intron and segment matches
+                    if (genData->segments.introns_by_ids[range_pos->second]->start + genData->segments.introns_by_ids[range_pos->second]->length - 1 == aln_int->first.second) {
                         found = true;
                         break;
                     }
                 }
-                // add new intronic segment
+                // add new intronic segment if we found no segment match
                 if (!found) {
                     long intron_id = genData->segments.exon_ids.size() + genData->segments.introns_by_ids.size();
-                    Segment* seg = new Segment(it3->first, it3->second - it3->first + 1, it->first.first, it->first.second, 0.0);
-                    if (genData->segments.introns.find(it->first) != genData->segments.introns.end()) {
-                        genData->segments.introns[it->first].insert(pair<long, long>(it3->first, intron_id));
-                    } else {
-                        multimap<unsigned long, unsigned long> tmp_map;
-                        tmp_map.insert(pair<unsigned long, unsigned long>(it3->first, intron_id));
-                        genData->segments.introns.insert(pair<pair<unsigned char, unsigned char>, multimap<unsigned long, unsigned long> >(it->first, tmp_map));
-                    }
+                    Segment* seg = new Segment(aln_int->first.first, aln_int->first.second - aln_int->first.first + 1, curr_chr->first.first, curr_chr->first.second, 0.0);
+                  //  fprintf(stdout, "added new intron from %i to %i\n", aln_int->first.first, aln_int->first.second); 
+                    genData->segments.introns[curr_chr->first].insert(pair<long, long>(aln_int->first.first, intron_id));
                     genData->segments.introns_by_ids.insert(pair<long, Segment*>(intron_id, seg));
                     segment_counter++;
                 }
             }
             if (conf->verbose)
                 fprintf(stdout, "   ... added %i segments\n", segment_counter);
+        } else {
+            // there are no segments for the current chromosome --> add all
+            for (map< pair<unsigned long, unsigned long>, unsigned int>::iterator aln_int = curr_chr->second.begin(); aln_int != curr_chr->second.end(); aln_int++) {
+                long intron_id = genData->segments.exon_ids.size() + genData->segments.introns_by_ids.size();
+                Segment* seg = new Segment(aln_int->first.first, aln_int->first.second - aln_int->first.first + 1, curr_chr->first.first, curr_chr->first.second, 0.0);
+                //fprintf(stdout, "added new intron from %i to %i\n", aln_int->first.first, aln_int->first.second); 
+                if (genData->segments.introns.find(curr_chr->first) != genData->segments.introns.end()) {
+                    genData->segments.introns[curr_chr->first].insert(pair<long, long>(aln_int->first.first, intron_id));
+                } else {
+                    multimap<unsigned long, unsigned long> tmp_map;
+                    tmp_map.insert(pair<unsigned long, unsigned long>(aln_int->first.first, intron_id));
+                    genData->segments.introns.insert(pair<pair<unsigned char, unsigned char>, multimap<unsigned long, unsigned long> >(curr_chr->first, tmp_map));
+                }
+                genData->segments.introns_by_ids.insert(pair<long, Segment*>(intron_id, seg));
+                segment_counter++;
+            }
         }
 
     }

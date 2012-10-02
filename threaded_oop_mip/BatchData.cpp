@@ -272,7 +272,7 @@ double BatchData::get_total_min_loss() {
     for (unordered_map<string, vector<Alignment> >::iterator r_idx = this->read_map_left.begin(); r_idx != this->read_map_left.end(); r_idx++) {
         for (vector<Alignment>::iterator v_idx = r_idx->second.begin(); v_idx != r_idx->second.end(); v_idx++) {
             if (v_idx->is_best) {
-                tmp_loss = v_idx->get_variance_loss(empty, empty);
+                tmp_loss = v_idx->get_variance_loss(empty, empty, empty, false);
                 sum_min_loss += tmp_loss.first;
             }
         }
@@ -280,7 +280,7 @@ double BatchData::get_total_min_loss() {
     for (unordered_map<string, vector<Alignment> >::iterator r_idx = this->read_map_right.begin(); r_idx != this->read_map_right.end(); r_idx++) {
         for (vector<Alignment>::iterator v_idx = r_idx->second.begin(); v_idx != r_idx->second.end(); v_idx++) {
             if (v_idx->is_best) {
-                tmp_loss = v_idx->get_variance_loss(empty, empty);
+                tmp_loss = v_idx->get_variance_loss(empty, empty, empty, false);
                 sum_min_loss += tmp_loss.first;
             }
         }
