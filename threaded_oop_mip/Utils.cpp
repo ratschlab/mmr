@@ -445,8 +445,8 @@ double compute_mip_loss(double observed_cov, double predicted_cov, unsigned long
     // predicted coverage is a mean that needs to be transfered into counts
     // in the case of intronic segments, the coverages are already counts, segment_len is 0 then 
     if (segment_len > 0 && conf->read_len > 0) {
-        predicted_cov *= segment_len / conf->read_len; 
-        observed_cov /= conf->read_len; 
+        predicted_cov *= ((double) segment_len / (double) conf->read_len); 
+        observed_cov /= (double) conf->read_len; 
     }
 
     if (observed_cov > 30000)
@@ -461,7 +461,6 @@ double compute_mip_loss(double observed_cov, double predicted_cov, unsigned long
         lower--;
 
     double loss = 0.0;
-
     double diff = abs(predicted_cov - observed_cov);
 
     // determine if left or right part of function needs to be queried

@@ -63,6 +63,7 @@ void Segments::get_from_file() {
                 //stop-=1; // 1-based -> 0-based
             } else if (idx == 5) { // 5 -> expected weight
                 expectation = atof(sl);
+                //fprintf(stdout, "Parsed expectation %f\n", expectation);
             } else {
                 break;
             }
@@ -127,16 +128,18 @@ pair<double, double> Segments::get_exon_segment_loss(vector<Alignment>::iterator
         // upper is the first element in the ordered list of segment starts and stops
         // that is greater to the block end
         map<long, long>::iterator upper = this->exons[chr_strand].upper_bound(block->second);
-        if (upper != this->exons[chr_strand].end())
-            upper++;
+        //if (upper != this->exons[chr_strand].end())
+        //    upper++;
         
         // iterate over all overlapping segments
         multimap<long, long>::iterator i;
         set<long> handled_ids;
         for (i = lower; i != upper && i != this->exons[chr_strand].end(); i++) {
-            //fprintf(stdout, "ali start: %i ali end: %i\n", alignment->start, alignment->get_end());
-            //fprintf(stdout, "block start: %i block end: %i\n", block->first, block->second);
-            //fprintf(stdout, "segment start: %i segment end: %i\n", this->exon_ids[i->second]->start, this->exon_ids[i->second]->start + this->exon_ids[i->second]->length - 1);
+            /*if (debug) {
+                fprintf(stdout, "ali start: %lu ali end: %lu\n", alignment->start, alignment->get_end());
+                fprintf(stdout, "block start: %lu block end: %lu\n", block->first, block->second);
+                fprintf(stdout, "segment start: %lu segment end: %lu\n", this->exon_ids[i->second]->start, this->exon_ids[i->second]->start + this->exon_ids[i->second]->length - 1);
+            }*/
             //unsigned int affected_pos = min(alignment->get_end(), block->second) - max(alignment->start, block->first) + 1;
             
             //if (curr_exon_ids.find(i->second) == curr_exon_ids.end()) {
@@ -225,14 +228,16 @@ pair<double, double> Segments::get_exon_segment_loss(vector<Alignment>::iterator
                 seg_cov_without = seg_cov;
             }
             if (debug)
-                fprintf(stdout, "seg_cov_with: %lu seg_cov_without: %lu\n", seg_cov_with, seg_cov_without);
+                fprintf(stdout, "seg_cov_with: %lu seg_cov_without: %lu seg_cov_expected: %f\n", seg_cov_with, seg_cov_without, this->exon_ids[id->first]->expectation);
 
             // compute loss with and without current alignment
             loss_with += compute_mip_loss(seg_cov_with, this->exon_ids[id->first]->expectation, this->exon_ids[id->first]->length);
             loss_without += compute_mip_loss(seg_cov_without, this->exon_ids[id->first]->expectation, this->exon_ids[id->first]->length);
             //fprintf(stdout, "overlap cov: %i\n", overlap_cov);
-            //fprintf(stdout, "exon_loss with %f; coverage with: %f; coverage expected: %f\n", loss_with, mean_cov_with, this->exon_ids[id->first]->expectation); 
-            //fprintf(stdout, "exon_loss without %f; coverage without: %f; coverage expected: %f\n", loss_without, mean_cov_without, this->exon_ids[id->first]->expectation); 
+            if (debug) {
+                fprintf(stdout, "exon_loss with %f; coverage with: %lu; coverage expected: %f; segment len: %i\n", loss_with, seg_cov_with, this->exon_ids[id->first]->expectation, this->exon_ids[id->first]->length); 
+                fprintf(stdout, "exon_loss without %f; coverage without: %lu; coverage expected: %f; segment len: %i\n", loss_without, seg_cov_without, this->exon_ids[id->first]->expectation, this->exon_ids[id->first]->length); 
+            }
         }
     }
     else if (!conf->use_mip_variance) {

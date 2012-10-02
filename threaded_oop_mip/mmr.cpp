@@ -458,6 +458,11 @@ int main(int argc, char *argv[]) {
                 if (conf->use_mip_objective)
                     fprintf(stdout, "total objective (2): %f\n", (float) genData->segments.get_total_loss());
             }
+
+            if (genData->num_altered == 0 && iteration > 1) {
+                fprintf(stdout, "\nAs no alignment was altered in the last run - No more iterations!\n\n");
+                break;
+            }
         }
 
         write_output_direct();
