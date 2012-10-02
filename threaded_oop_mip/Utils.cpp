@@ -587,7 +587,7 @@ void add_zero_segments() {
                 multimap<unsigned long, unsigned long>::iterator range_pos = genData->segments.introns[curr_chr->first].lower_bound(aln_int->first.first);
                 multimap<unsigned long, unsigned long>::iterator range_end = genData->segments.introns[curr_chr->first].upper_bound(aln_int->first.first);
                 bool found = false;
-                for (range_pos; range_pos != range_end; range_pos++) {
+                for (; range_pos != range_end; range_pos++) {
                     assert(genData->segments.introns_by_ids[range_pos->second]->start == range_pos->first);
                     // match coordinates of aln_intron and segment matches
                     if (genData->segments.introns_by_ids[range_pos->second]->start + genData->segments.introns_by_ids[range_pos->second]->length - 1 == aln_int->first.second) {
