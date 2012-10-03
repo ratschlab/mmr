@@ -88,8 +88,8 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-S --strand-specific \talignments are strand specific [off]\n");
     // Filter options
     fprintf(stderr, "\n\tInput file filtering:\n");
-    fprintf(stderr, "\t-f --pre-filter \tpre filter all alignments that have F more edit ops than the best [off]\n");
-    fprintf(stderr, "\t-F --filter-dist [INT]\tfilter distance F for pre-filter [3]\n");
+    fprintf(stderr, "\t-f --pre-filter \tpre filter all alignments that have F more edit ops than the best [on]\n");
+    fprintf(stderr, "\t-F --filter-dist [INT]\tfilter distance F for pre-filter [1]\n");
     fprintf(stderr, "\t-V --use-variants \tuse variant alignments for filtering (different edit op count,\n");
     fprintf(stderr, "\t\t\t\trequires XG and XM Tag in alignment files) [off]\n");
     // Paired Alignment options
@@ -152,13 +152,13 @@ void Config::init() {
     verbose = false;
     print_best_only = false;
     use_pair_info = false;
-    pre_filter = false;
+    pre_filter = true;
     parse_complete = false;
     use_mip_objective = false;
     strand_specific = false;
     window_size = 20;
     iterations = 5;
-    filter_distance = 3;
+    filter_distance = 1;
     intron_offset = 5;
     insert_size = 200.0;
     insert_dev = 0.4;
