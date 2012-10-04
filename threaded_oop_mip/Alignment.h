@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <map>
 
 using namespace std;
 
@@ -20,8 +21,10 @@ public:
     unsigned char quality;
     unsigned char strand;
     bool reversed;
+    set<unsigned int> deletions;
+    map<unsigned int, int> insertions;
 
-    Alignment(const unsigned char a, const unsigned long b, const vector<char> c, const vector<int> cc, const bool d, const unsigned char e, const unsigned char f, const unsigned char g, bool h) :
+    Alignment(const unsigned char a, const unsigned long b, const vector<char> c, const vector<int> cc, const bool d, const unsigned char e, const unsigned char f, const unsigned char g, const bool h, const set<unsigned char> deletions, const map<unsigned int, int> insertions) :
         chr(a), start(b), operations(c), sizes(cc), is_best(d), edit_ops(e) , quality(f), strand(g), reversed(h) {}
 
     Alignment() :
@@ -51,6 +54,10 @@ public:
     set<unsigned long> get_overlap(Alignment &other);
 
     set<unsigned long> get_genome_pos(unsigned int window_size = 0);
+
+    unsigned int get_length();
+
+    void determine_gaps();
 
     void clear();
     

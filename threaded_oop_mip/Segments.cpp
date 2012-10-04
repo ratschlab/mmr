@@ -1,5 +1,6 @@
 
 #include <algorithm>
+#include <assert.h>
 
 #include "Segments.h"
 #include "Utils.h"
@@ -106,78 +107,88 @@ void Segments::get_from_file() {
 }
 
 
-pair<double, double> Segments::get_exon_segment_loss(vector<Alignment>::iterator alignment, set<unsigned long> overlap_region, bool debug) {
+pair<double, double> Segments::get_exon_segment_loss(vector<vector<Alignment>::iterator> alignments, set<unsigned long> invariant_pos, bool debug) {
 
     // overlapping segments
     // pair of segment ID and length of overlap to the alignment (number of overlapping positions)
-    map<unsigned long, set<unsigned int> > curr_exon_ids;
-    vector<unsigned long> curr_intron_ids;
+    map<unsigned long, pair<vector<set<unsigned int> >, vector<vector<Alignment>::iterator> > > curr_exon_ids;
+    map<unsigned long, vector<vector<Alignment>::iterator> > curr_intron_ids;
 
-    // get all blocks of the current alignment
-    // block coordinates are closed intervals!
-    vector<pair<unsigned long, unsigned long> > exon_blocks;
-    alignment->get_blocks(exon_blocks);
+    for (vector<vector<Alignment>::iterator>::iterator ca = alignments.begin(); ca != alignments.end(); ca++) {
+        // get all blocks of the current alignment
+        // block coordinates are closed intervals!
+        vector<pair<unsigned long, unsigned long> > exon_blocks;
+        vector<unsigned long> tmp;
+        (*ca)->get_blocks(exon_blocks);
 
-    // iterate over all available blocks and add the IDs of overlapping exon segments to the common list curr_exon_ids 
-    vector<pair<unsigned long, unsigned long> >::iterator block;
-    pair<unsigned char, unsigned char> chr_strand = pair<unsigned char, unsigned char>(alignment->chr, alignment->strand);
-    for (block = exon_blocks.begin(); block != exon_blocks.end(); block++) {
-        // lower is the first element in the ordered list of segment starts and stops
-        // that is greater or equal to the block start
-        map<long, long>::iterator lower = this->exons[chr_strand].lower_bound(block->first);
-        // upper is the first element in the ordered list of segment starts and stops
-        // that is greater to the block end
-        map<long, long>::iterator upper = this->exons[chr_strand].upper_bound(block->second);
-        //if (upper != this->exons[chr_strand].end())
-        //    upper++;
-        
-        // iterate over all overlapping segments
-        multimap<long, long>::iterator i;
-        set<long> handled_ids;
-        for (i = lower; i != upper && i != this->exons[chr_strand].end(); i++) {
-            /*if (debug) {
-                fprintf(stdout, "ali start: %lu ali end: %lu\n", alignment->start, alignment->get_end());
-                fprintf(stdout, "block start: %lu block end: %lu\n", block->first, block->second);
-                fprintf(stdout, "segment start: %lu segment end: %lu\n", this->exon_ids[i->second]->start, this->exon_ids[i->second]->start + this->exon_ids[i->second]->length - 1);
-            }*/
-            //unsigned int affected_pos = min(alignment->get_end(), block->second) - max(alignment->start, block->first) + 1;
+        // iterate over all available blocks and add the IDs of overlapping exon segments to the common list curr_exon_ids 
+        vector<pair<unsigned long, unsigned long> >::iterator block;
+        pair<unsigned char, unsigned char> chr_strand = pair<unsigned char, unsigned char>((*ca)->chr, (*ca)->strand);
+        for (block = exon_blocks.begin(); block != exon_blocks.end(); block++) {
+            // lower is the first element in the ordered list of segment starts and stops
+            // that is greater or equal to the block start
+            map<long, long>::iterator lower = this->exons[chr_strand].lower_bound(block->first);
+            // upper is the first element in the ordered list of segment starts and stops
+            // that is greater to the block end
+            map<long, long>::iterator upper = this->exons[chr_strand].upper_bound(block->second);
             
-            //if (curr_exon_ids.find(i->second) == curr_exon_ids.end()) {
-            if (handled_ids.find(i->second) == handled_ids.end()) {
-                set<unsigned int> affected_pos;
-                for (unsigned int v_i = max(this->exon_ids[i->second]->start, block->first); v_i <= min(this->exon_ids[i->second]->start + this->exon_ids[i->second]->length - 1, block->second); v_i++) {
-                    affected_pos.insert(v_i);
+            // iterate over all overlapping segments
+            multimap<long, long>::iterator i;
+            set<long> handled_ids;
+            for (i = lower; i != upper && i != this->exons[chr_strand].end(); i++) {
+                /*if (debug) {
+                    fprintf(stdout, "ali start: %lu ali end: %lu\n", alignment->start, alignment->get_end());
+                    fprintf(stdout, "block start: %lu block end: %lu\n", block->first, block->second);
+                    fprintf(stdout, "segment start: %lu segment end: %lu\n", this->exon_ids[i->second]->start, this->exon_ids[i->second]->start + this->exon_ids[i->second]->length - 1);
+                }*/
+                if (handled_ids.find(i->second) == handled_ids.end()) {
+                    set<unsigned int> affected_pos;
+                    for (unsigned int v_i = max(this->exon_ids[i->second]->start, block->first); v_i <= min(this->exon_ids[i->second]->start + this->exon_ids[i->second]->length - 1, block->second); v_i++) {
+                        //if ((*ca)->deletions.find(v_i) == (*ca)->deletions.end())
+                        if (invariant_pos.find(v_i) == invariant_pos.end())
+                            affected_pos.insert(v_i);
+                    }
+                    if (curr_exon_ids.find(i->second) == curr_exon_ids.end()) {
+                        vector<set<unsigned int> > tmp;
+                        tmp.push_back(affected_pos);
+                        vector<vector<Alignment>::iterator> tmp2;
+                        tmp2.push_back(*ca);
+                        curr_exon_ids.insert(pair<unsigned long, pair<vector<set<unsigned int> >, vector<vector<Alignment>::iterator> > >(i->second, make_pair(tmp, tmp2)));
+                    } else {
+                        curr_exon_ids[i->second].first.push_back(affected_pos);
+                        curr_exon_ids[i->second].second.push_back(*ca);
+                    }
+                    handled_ids.insert(i->second);
                 }
-                curr_exon_ids.insert(pair<unsigned long, set<unsigned int>>(i->second, affected_pos));
-                handled_ids.insert(i->second);
-                //unsigned int affected_pos = min(this->exon_ids[i->second]->start + this->exon_ids[i->second]->length - 1, block->second) - max(this->exon_ids[i->second]->start, block->first) + 1;
-                //curr_exon_ids.insert(pair<unsigned long, unsigned int>(i->second, affected_pos));
             }
         }
-    }
 
-    // get intron information from alignment blocks
-    // intron IDs are inferred directly from the exon blocks
-    if (exon_blocks.size() > 1) {
-        //for (block = exon_blocks.begin(); block != exon_blocks.end(); block++) {
-        //    fprintf(stdout, "block start: %i block end: %i\n", (unsigned int)block->first, (unsigned int) block->second);
-        //}
-        for (block = exon_blocks.begin() + 1; block != exon_blocks.end(); block++) {
-            // get range of intron starts fitting to the previous block end
-            pair<multimap<unsigned long, unsigned long>::iterator, multimap<unsigned long, unsigned long>::iterator> it_range = this->introns[chr_strand].equal_range((*(block-1)).second + 1);
-            // check if any intron fits the gap between previous block and current block
-            for (multimap<unsigned long, unsigned long>::iterator it = it_range.first; it != it_range.second; it++) {
-                if (debug) {
+        // get intron information from alignment blocks
+        // intron IDs are inferred directly from the exon blocks
+        if (exon_blocks.size() > 1) {
+            for (block = exon_blocks.begin() + 1; block != exon_blocks.end(); block++) {
+                // get range of intron starts fitting to the previous block end
+                pair<multimap<unsigned long, unsigned long>::iterator, multimap<unsigned long, unsigned long>::iterator> it_range = this->introns[chr_strand].equal_range((*(block-1)).second + 1);
+                // check if any intron fits the gap between previous block and current block
+                for (multimap<unsigned long, unsigned long>::iterator it = it_range.first; it != it_range.second; it++) {
+                    if (debug) {
                         fprintf(stdout, "checked intron from %lu to %lu\n", (*(block-1)).second + 1, block->first - 1);
                         fprintf(stdout, "with exp intron from %lu to %lu\n", this->introns_by_ids[it->second]->start, this->introns_by_ids[it->second]->start+this->introns_by_ids[it->second]->length - 1);
                     }
                     if ((*(block-1)).second + this->introns_by_ids[it->second]->length == block->first - 1) {
-                        curr_intron_ids.push_back(it->second);
+                        if (curr_intron_ids.find(it->second) == curr_intron_ids.end()) {
+                            vector<vector<Alignment>::iterator> tmp;
+                            tmp.push_back(*ca);
+                            curr_intron_ids.insert(make_pair(it->second, tmp));
+                        } else {
+                            curr_intron_ids[it->second].push_back(*ca);
+                        }
                         break;
                     }
                 }
             }
         }
+    }
 
     // compute coverage and loss
     vector<unsigned int>::iterator cov_idx;
@@ -192,43 +203,53 @@ pair<double, double> Segments::get_exon_segment_loss(vector<Alignment>::iterator
         // iterate over all exonic segments
         if (debug)
             fprintf(stdout, "Iterating over %i overlapping exonic segments:\n", (int) curr_exon_ids.size());
-        map<unsigned long, set<unsigned int> >::iterator id;
+        map<unsigned long, pair<vector<set<unsigned int> >, vector<vector<Alignment>::iterator> > >::iterator id;
         for (id = curr_exon_ids.begin(); id != curr_exon_ids.end(); id++) {
-            unsigned long seg_start = this->exon_ids[id->first]->start;
-            unsigned long seg_end = seg_start + this->exon_ids[id->first]->length;
+            Segment* seg = this->exon_ids[id->first];
+            unsigned long seg_start = seg->start;
+            unsigned long seg_end = seg_start + seg->length;
             unsigned long seg_cov = 0;
-            unsigned long overlap_len = 0;
-            pair<unsigned char, unsigned char> cov_chr = pair<unsigned char, unsigned char>(alignment->chr, alignment->strand);
+            //unsigned long overlap_len = 0;
+
+            pair<unsigned char, unsigned char> cov_chr = pair<unsigned char, unsigned char>(seg->chr, seg->strand);
             for (cov_idx = genData->coverage_map[cov_chr].begin() + seg_start; cov_idx != genData->coverage_map[cov_chr].begin() + seg_end; cov_idx++) {
                 // seg_cov stores the total coverage of the segment
                 // overlap_cov stores the coverage of positions that come from the overlap between the possible multimapping locations
-                //if (overlap_region.size() > 0 && overlap_region.find((cov_idx - genData->coverage_map[alignment->chr].begin()) + seg_start) != overlap_region.end())
-                unsigned long ov_pos = cov_idx - genData->coverage_map[cov_chr].begin();
-                if (overlap_region.size() > 0 && overlap_region.find(ov_pos) != overlap_region.end() && id->second.find(ov_pos) != id->second.end())
-                    overlap_len += 1; 
+               // unsigned long ov_pos = cov_idx - genData->coverage_map[cov_chr].begin();
+               // if (overlap_region.size() > 0 && overlap_region.find(ov_pos) != overlap_region.end() && id->second.find(ov_pos) != id->second.end())
+               //     overlap_len += 1; 
                 seg_cov += (unsigned long) (*cov_idx); 
             }
             if (debug)
                 fprintf(stdout, "seg id: %lu seg start: %lu seg end: %lu seg strand: %c\n", id->first, seg_start, seg_end - 1, this->exon_ids[id->first]->strand);
             
-           // compute mean segment coverage under consideration of the overlap
-           // double mean_cov_with = 0.0;
-           // double mean_cov_without = 0.0;
-            unsigned long seg_cov_with = 0;
-            unsigned long seg_cov_without = 0;
-            //fprintf(stdout, "seg cov: %i affected pos: %i seg len: %i\n", seg_cov, id->second, this->exon_ids[id->first]->length);
-            if (debug) 
-                fprintf(stdout, "seg_cov: %lu affected pos: %i overlap_len: %lu\n", seg_cov, (int) id->second.size(), overlap_len);
+            // compute mean segment coverage under consideration of the overlap
+            unsigned long seg_cov_with = seg_cov;
+            unsigned long seg_cov_without = seg_cov;
+            // iterate over all alignments overlapping to that segment and altering the coverage
+            vector<set<unsigned int> >::iterator ap = id->second.first.begin();
+            for (vector<vector<Alignment>::iterator>::iterator ca = id->second.second.begin(); ca != id->second.second.end(); ca++) {
+                if (debug)
+                    (*ca)->print();
+                if ((*ca)->is_best)
+                    seg_cov_without -= ap->size();
+                else
+                    seg_cov_with += ap->size();
+                ap++;
+            }
+
+           // if (debug) 
+           //     fprintf(stdout, "seg_cov: %lu affected pos: %i overlap_len: %lu\n", seg_cov, (int) id->second.size(), overlap_len);
             
-            if (alignment->is_best) {
+            /*if (alignment->is_best) {
                 seg_cov_with = seg_cov;
                 seg_cov_without = seg_cov - id->second.size() + overlap_len;
             } else {
                 seg_cov_with = seg_cov + id->second.size() - overlap_len;
                 seg_cov_without = seg_cov;
-            }
-            if (debug)
-                fprintf(stdout, "seg_cov_with: %lu seg_cov_without: %lu seg_cov_expected: %f\n", seg_cov_with, seg_cov_without, this->exon_ids[id->first]->expectation);
+            }*/
+            //if (debug)
+            //    fprintf(stdout, "seg_cov_with: %lu seg_cov_without: %lu seg_cov_expected: %f\n", seg_cov_with, seg_cov_without, this->exon_ids[id->first]->expectation);
 
             // compute loss with and without current alignment
             loss_with += compute_mip_loss(seg_cov_with, this->exon_ids[id->first]->expectation, this->exon_ids[id->first]->length);
@@ -243,7 +264,6 @@ pair<double, double> Segments::get_exon_segment_loss(vector<Alignment>::iterator
     else if (!conf->use_mip_variance) {
         if (debug) {
             fprintf(stdout, "Did not find overlapping segments!\n");
-            alignment->print();
         }
         loss_with = 0.0;
         loss_without = 0.0;
@@ -254,38 +274,49 @@ pair<double, double> Segments::get_exon_segment_loss(vector<Alignment>::iterator
 
     if (curr_intron_ids.size() > 0) {
         // iterate over all intronic segments
-        vector<unsigned long>::iterator id_int;
         if (debug)
-            fprintf(stdout, "Iterating over %i overlapping exonic segments:\n", (int) curr_intron_ids.size());
-        for (id_int = curr_intron_ids.begin(); id_int != curr_intron_ids.end(); id_int++) {
+            fprintf(stdout, "Iterating over %i overlapping intronic segments:\n", (int) curr_intron_ids.size());
+        for (map<unsigned long, vector<vector<Alignment>::iterator> >::iterator id_int = curr_intron_ids.begin(); id_int != curr_intron_ids.end(); id_int++) {
             unsigned int intron_cov = 0;
-            unsigned long intron_start = this->introns_by_ids[*id_int]->start;
-            unsigned long intron_end = intron_start + this->introns_by_ids[*id_int]->length - 1;
-            map< pair<unsigned long, unsigned long>, unsigned int>::iterator it = genData->intron_coverage_map[pair<unsigned char, unsigned char>(alignment->chr, alignment->strand)].find(pair<unsigned long, unsigned long>(intron_start, intron_end));
-            if (it != genData->intron_coverage_map[pair<unsigned char, unsigned char>(alignment->chr, alignment->strand)].end())
+            Segment* seg = this->introns_by_ids[id_int->first];
+            unsigned long intron_start = seg->start;
+            unsigned long intron_end = intron_start + seg->length - 1;
+            map< pair<unsigned long, unsigned long>, unsigned int>::iterator it = genData->intron_coverage_map[pair<unsigned char, unsigned char>(seg->chr, seg->strand)].find(pair<unsigned long, unsigned long>(intron_start, intron_end));
+            if (it != genData->intron_coverage_map[pair<unsigned char, unsigned char>(seg->chr, seg->strand)].end())
                 intron_cov = it->second;
             if (debug)
-                fprintf(stdout, "intron id: %lu intron start: %lu intron end: %lu intron strand: %c\n", *id_int, intron_start, intron_end - 1, this->introns_by_ids[*id_int]->strand);
+                fprintf(stdout, "intron id: %lu intron start: %lu intron end: %lu intron strand: %c\n", id_int->first, intron_start, intron_end, this->introns_by_ids[id_int->first]->strand);
 
-            double intron_cov_with = 0.0;
-            double intron_cov_without = 0.0;
-            if (alignment->is_best) {
-                intron_cov_with = intron_cov;
-                intron_cov_without = intron_cov - 1;
-            } else {
-                intron_cov_with = intron_cov + 1;
-                intron_cov_without = intron_cov;
+            double intron_cov_with = intron_cov;
+            double intron_cov_without = intron_cov;
+            // iterate over all alignments overlapping to that intron segment
+            for (vector<vector<Alignment>::iterator>::iterator ca = id_int->second.begin(); ca != id_int->second.end(); ca++) {
+                if ((*ca)->is_best)
+                    intron_cov_without -= 1;
+                else 
+                    intron_cov_with += 1;
             }
+            if (!(intron_cov_without >= 0 && intron_cov_with >= 0)) {
+                for (vector<vector<Alignment>::iterator>::iterator ca = id_int->second.begin(); ca != id_int->second.end(); ca++) {
+                    (*ca)->print();
+                }
+                fprintf(stderr, "intron id: %lu intron start: %lu intron end: %lu intron strand: %c cov with: %f cov_without: %f\n", id_int->first, intron_start, intron_end, this->introns_by_ids[id_int->first]->strand, intron_cov_with, intron_cov_without);
+            }
+            assert(intron_cov_without >= 0 && intron_cov_with >= 0);
             // compute loss with and without current alignment
-            loss_with += compute_mip_loss(intron_cov_with, this->introns_by_ids[*id_int]->expectation);
-            loss_without += compute_mip_loss(intron_cov_without, this->introns_by_ids[*id_int]->expectation);
-            //fprintf(stdout, "intron_loss with %f; coverage with: %f; coverage expected: %f\n", loss_with, intron_cov_with, this->introns_by_ids[*id_int]->expectation); 
-            //fprintf(stdout, "intron_loss without %f; coverage without: %f; coverage expected: %f\n", loss_without, intron_cov_without, this->introns_by_ids[*id_int]->expectation); 
+            loss_with += compute_mip_loss(intron_cov_with, this->introns_by_ids[id_int->first]->expectation);
+            loss_without += compute_mip_loss(intron_cov_without, this->introns_by_ids[id_int->first]->expectation);
+
+            if (debug) {
+                fprintf(stdout, "intron_loss with %f; coverage with: %f; coverage expected: %f\n", loss_with, intron_cov_with, this->introns_by_ids[id_int->first]->expectation); 
+                fprintf(stdout, "intron_loss without %f; coverage without: %f; coverage expected: %f\n", loss_without, intron_cov_without, this->introns_by_ids[id_int->first]->expectation); 
+            }
         }
     }
 
-    pair<double, double> result (loss_with, loss_without);
-    return result;
+    //pair<double, double> result (loss_with, loss_without);
+    //return result;
+    return make_pair(loss_with, loss_without);
 }
 
 double Segments::get_total_loss() {

@@ -32,7 +32,7 @@ public:
 
     void get_from_file();
 
-    pair<double, double> get_exon_segment_loss(vector<Alignment>::iterator alignment, set<unsigned long> overlap_region, bool debug = false);
+    pair<double, double> get_exon_segment_loss(vector<vector<Alignment>::iterator> alignments, set<unsigned long> invariant_pos, bool debug = false);
 
     double get_total_loss();
 };

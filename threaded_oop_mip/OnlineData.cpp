@@ -40,11 +40,14 @@ void OnlineData::process_data_online(GeneralData* genData) {
         ignore_idx_left = filter_alignments(this->left_reads);
         pthread_mutex_lock(&mutex_best_left);
         if (ignore_idx_left.find(this->left_reads.begin() + genData->best_left[this->last_id]) != ignore_idx_left.end()) {
-            (this->left_reads.begin() + genData->best_left[this->last_id])->is_best = false;
+            vector<Alignment>::iterator curr_align = (this->left_reads.begin() + genData->best_left[this->last_id]);
+            curr_align->is_best = false;
+            curr_align->update_coverage_map(0);
             for (vector<Alignment>::iterator v_idx = this->left_reads.begin(); v_idx != this->left_reads.end(); v_idx++) {
                 if (ignore_idx_left.find(v_idx) == ignore_idx_left.end()) {
                     genData->best_left[this->last_id] = v_idx - this->left_reads.begin();
                     v_idx->is_best = true;
+                    v_idx->update_coverage_map(1);
                     break;
                 }
             }
@@ -54,11 +57,14 @@ void OnlineData::process_data_online(GeneralData* genData) {
         ignore_idx_right = filter_alignments(this->right_reads);
         pthread_mutex_lock(&mutex_best_right);
         if (ignore_idx_right.find(this->right_reads.begin() + genData->best_right[this->last_id]) != ignore_idx_right.end()) {
-            (this->right_reads.begin() + genData->best_right[this->last_id])->is_best = false;
+            vector<Alignment>::iterator curr_align = (this->right_reads.begin() + genData->best_right[this->last_id]);
+            curr_align->is_best = false;
+            curr_align->update_coverage_map(0);
             for (vector<Alignment>::iterator v_idx = this->right_reads.begin(); v_idx != this->right_reads.end(); v_idx++) {
                 if (ignore_idx_right.find(v_idx) == ignore_idx_right.end()) {
                     genData->best_right[this->last_id] = v_idx - this->right_reads.begin();
                     v_idx->is_best = true;
+                    v_idx->update_coverage_map(1);
                     break;
                 }
             }
@@ -434,7 +440,7 @@ char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData
 
         if (pair_info == 0) {
             // id == last_id or last_id is empty
-            if ((! id.compare(this->last_id)) || this->last_id.size() == 0) {
+            if (id.compare(this->last_id) == 0 || this->last_id.size() == 0) {
                 b_idx = genData->best_left.find(id);
                 if (b_idx == genData->best_left.end()) {
                     pthread_mutex_lock(&mutex_best_left);
@@ -443,8 +449,10 @@ char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData
                     curr_alignment.is_best = true;
                     curr_alignment.update_coverage_map(1);
                 }
-                else if (b_idx->second == this->left_reads.size())
+                else if (b_idx->second == this->left_reads.size()) {
                     curr_alignment.is_best = true;
+                    // TODO unsicher
+                }
                 this->left_reads.push_back(curr_alignment);
                 this->last_id = id;
             } else {
@@ -461,8 +469,10 @@ char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData
                     curr_alignment.is_best = true;
                     curr_alignment.update_coverage_map(1);
                 }
-                else if (b_idx->second == this->right_reads.size())
+                else if (b_idx->second == this->right_reads.size()) {
                     curr_alignment.is_best = true;
+                    // TODO unsicher
+                }
                 this->right_reads.push_back(curr_alignment);
                 this->last_id = id;
             } else {

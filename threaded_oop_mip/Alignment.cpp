@@ -1,3 +1,4 @@
+#include "assert.h"
 #include "Alignment.h"
 #include "Utils.h"
 
@@ -57,6 +58,7 @@ string Alignment::fill(char* sl, unsigned char &pair) {
     if (idx < 6) {
         return(string(""));
     }
+    this->determine_gaps();
     return id;
 }
 
@@ -194,9 +196,10 @@ void Alignment::update_coverage_map(bool positive) {
                             genData->intron_coverage_map.insert(pair<pair<unsigned char, unsigned char>, map< pair<unsigned long, unsigned long>, unsigned int> >(pair<unsigned char, unsigned char>(this->chr, this->strand), tmp));
                         }
                         map< pair<unsigned long, unsigned long>, unsigned int>::iterator it = genData->intron_coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].find(pair<unsigned long, unsigned long>(pos, pos + this->sizes.at(i) - 1));
-                        if (it != genData->intron_coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].end())
+                        if (it != genData->intron_coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].end()) {
+                            assert(it->second > 0 || positive);
                             it->second += (it->second > 0 || positive) ? (2*positive - 1) : 0;
-                        else
+                        } else
                             genData->intron_coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].insert(pair<pair<unsigned long, unsigned long>, unsigned int>(pair<unsigned long, unsigned long>(pos, pos + this->sizes.at(i) - 1), 1));
                         pos += this->sizes.at(i);
                         idx += this->sizes.at(i);
@@ -347,4 +350,30 @@ void Alignment::print() {
         fprintf(stdout, "%i%c", this->sizes.at(i), this->operations.at(i));
     }
     fprintf(stdout, ", is_best: %i\n", this->is_best);
+}
+
+void Alignment::determine_gaps() {
+    unsigned int pos = this->start;
+
+    for (size_t i = 0; i < this->operations.size(); i++) {
+        if (this->operations.at(i) == 'M' || this->operations.at(i) == 'N')
+            pos += sizes.at(i);
+        else if (this->operations.at(i) == 'I') 
+            this->insertions.insert(make_pair(pos, this->sizes.at(i)));
+        else if (this->operations.at(i) == 'D') {
+            for (int j = 0; j < this->sizes.at(i); j++)
+                this->deletions.insert(pos + j);
+            pos += this->sizes.at(i);
+        }
+    }
+}
+
+unsigned int Alignment::get_length() {
+    unsigned int length = 0;
+    for (size_t i = 0; i < this->operations.size(); i++) {
+        if (this->operations.at(i) == 'M' || this->operations.at(i) == 'D') {
+            length += this->sizes.at(i);
+        }
+    }
+    return length;
 }

@@ -201,9 +201,15 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
     // we need segments overlapping at least one of the two candidates
     if (conf->use_mip_objective) {
        
+        pair<double, double> loss_best, loss_cand;
+        // loss candidate
+        vector<vector<Alignment>::iterator> candidate;
+        candidate.push_back(candidate_left);
+        candidate.push_back(candidate_right);
+
         // loss candidate_left
         // loss best_left
-        if (candidate_left == best_left) {
+       /* if (candidate_left == best_left) {
             loss_cl = pair<double, double>(0.0, 0.0);
             loss_bl = pair<double, double>(0.0, 0.0);
         } else {
@@ -213,11 +219,17 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
             loss_cl = genData->segments.get_exon_segment_loss(candidate_left, overlap, debug);
             loss_bl = genData->segments.get_exon_segment_loss(best_left, overlap, debug);
         }
-        overlap.clear();
+        overlap.clear();*/
+        set_union(genome_pos_bl.begin(), genome_pos_bl.end(), genome_pos_br.begin(), genome_pos_br.end(), inserter(overlap, overlap.begin()));
+        loss_cand = genData->segments.get_exon_segment_loss(candidate, overlap, debug);
 
+        // loss best
+        vector<vector<Alignment>::iterator> best;
+        best.push_back(best_left);
+        best.push_back(best_right);
         // loss candidate_rigth
         // loss best_right
-        if (candidate_right == best_right) {
+        /*if (candidate_right == best_right) {
             loss_cr = pair<double, double>(0.0, 0.0);
             loss_br = pair<double, double>(0.0, 0.0);
         } else {
@@ -226,11 +238,17 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
             loss_cr = genData->segments.get_exon_segment_loss(candidate_right, overlap, debug);
             loss_br = genData->segments.get_exon_segment_loss(best_right, overlap, debug);
         }
+        overlap.clear();*/
         overlap.clear();
+        set_union(genome_pos_cl.begin(), genome_pos_cl.end(), genome_pos_cr.begin(), genome_pos_cr.end(), inserter(overlap, overlap.begin()));
+        loss_best = genData->segments.get_exon_segment_loss(best, overlap, debug);
 
         // check if any loss is valid
         // first is loss_with and second is loss_without
-        if (loss_cl.first >= 0.0 || loss_cr.first >= 0.0 || loss_br.first >= 0.0 || loss_bl.first >= 0.0) {
+        //if (loss_cl.first >= 0.0 || loss_cr.first >= 0.0 || loss_br.first >= 0.0 || loss_bl.first >= 0.0) {
+        if (loss_best.first >= 0.0 || loss_cand.first >= 0.0) {
+           best_loss = loss_best.first + loss_cand.second;
+           candidate_loss = loss_best.second + loss_cand.first;
            used_mip = true;
         }
     }
@@ -283,19 +301,19 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
             fprintf(stdout, "best_right\n");
             loss_br = best_right->get_variance_loss(genome_pos_cr, genome_pos_cl, genome_pos_bl, true);
         }*/
+        // determine total loss
+        candidate_loss += (loss_cl.first >= 0.0) ? loss_cl.first : 0.0;
+        candidate_loss += (loss_cr.first >= 0.0) ? loss_cr.first : 0.0;
+        candidate_loss += (loss_bl.second >= 0.0) ? loss_bl.second : 0.0;
+        candidate_loss += (loss_br.second >= 0.0) ? loss_br.second : 0.0;
+        best_loss += (loss_cl.second >= 0.0) ? loss_cl.second : 0.0;
+        best_loss += (loss_cr.second >= 0.0) ? loss_cr.second : 0.0;
+        best_loss += (loss_bl.first >= 0.0) ? loss_bl.first : 0.0;
+        best_loss += (loss_br.first >= 0.0) ? loss_br.first : 0.0;
     }
 
-    // determine total loss
-    candidate_loss += (loss_cl.first >= 0.0) ? loss_cl.first : 0.0;
-    candidate_loss += (loss_cr.first >= 0.0) ? loss_cr.first : 0.0;
-    candidate_loss += (loss_bl.second >= 0.0) ? loss_bl.second : 0.0;
-    candidate_loss += (loss_br.second >= 0.0) ? loss_br.second : 0.0;
-    best_loss += (loss_cl.second >= 0.0) ? loss_cl.second : 0.0;
-    best_loss += (loss_cr.second >= 0.0) ? loss_cr.second : 0.0;
-    best_loss += (loss_bl.first >= 0.0) ? loss_bl.first : 0.0;
-    best_loss += (loss_br.first >= 0.0) ? loss_br.first : 0.0;
     if (debug) {
-        fprintf(stdout, "candidate left:\n");
+        /*fprintf(stdout, "candidate left:\n");
         candidate_left->print();
         fprintf(stdout, "candidate right:\n");
         candidate_right->print();
@@ -304,7 +322,7 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
         fprintf(stdout, "best right:\n");
         best_right->print();
         fprintf(stdout, "cand loss left (w): %f  cand loss right (w): %f best loss left (w): %f best loss right (w):%f\n", loss_cl.first, loss_cr.first, loss_bl.first, loss_br.first);
-        fprintf(stdout, "cand loss left (wo): %f  cand loss right (wo): %f best loss left (wo): %f best loss right (wo):%f\n", loss_cl.second, loss_cr.second, loss_bl.second, loss_br.second);
+        fprintf(stdout, "cand loss left (wo): %f  cand loss right (wo): %f best loss left (wo): %f best loss right (wo):%f\n", loss_cl.second, loss_cr.second, loss_bl.second, loss_br.second);*/
         fprintf(stdout, "best loss: %f\n", best_loss);
         fprintf(stdout, "candidate loss: %f\n", candidate_loss);
         fprintf(stdout, "delta (best - cand): %f\n", best_loss - candidate_loss);
@@ -335,8 +353,15 @@ bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::it
     // we need segments overlapping at least one of the two candidates
     if (conf->use_mip_objective) {
 
-        loss_candidate = genData->segments.get_exon_segment_loss(candidate, genome_pos_best, debug);
-        loss_best = genData->segments.get_exon_segment_loss(best, genome_pos_candidate, debug);
+        vector<vector<Alignment>::iterator> cand_tmp;
+        vector<vector<Alignment>::iterator> best_tmp;
+        cand_tmp.push_back(candidate);
+        best_tmp.push_back(best);
+
+        //loss_candidate = genData->segments.get_exon_segment_loss(candidate, genome_pos_best, debug);
+        //loss_best = genData->segments.get_exon_segment_loss(best, genome_pos_candidate, debug);
+        loss_candidate = genData->segments.get_exon_segment_loss(cand_tmp, genome_pos_best, debug);
+        loss_best = genData->segments.get_exon_segment_loss(best_tmp, genome_pos_candidate, debug);
 
         // check if any loss is valid
         // first is loss_with and second is loss_without
