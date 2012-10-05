@@ -28,7 +28,12 @@ public:
     map<unsigned long, Segment*> introns_by_ids;
 
     Segments() {};
-    ~Segments() {};
+    ~Segments() {
+        for (map<long, Segment*>::iterator it = exon_ids.begin(); it != exon_ids.end(); it++)
+            delete it->second;
+        for (map<unsigned long, Segment*>::iterator it = introns_by_ids.begin(); it != introns_by_ids.end(); it++)
+            delete it->second;
+    };
 
     void get_from_file();
 

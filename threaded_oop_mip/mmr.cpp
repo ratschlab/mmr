@@ -47,8 +47,8 @@ void write_output_direct() {
     FILE* infile = open_bam_pipe_in(conf->infile);
 
     char* ret;
-    char line[1000];
-    char cp_line[1000];
+    char line[10000];
+    char cp_line[10000];
 
     unsigned char pair_info = 0;
 
@@ -60,7 +60,6 @@ void write_output_direct() {
     string id;
     string last_left_id = string("");
     string last_right_id = string("");
-    Alignment curr_alignment;
 
     if (conf->outfile.size() == 0) {
         fprintf(stderr, "\nERROR: No outfile defined!\n\n");
@@ -71,8 +70,11 @@ void write_output_direct() {
         fprintf(stdout, "Writing output to %s ...\n", conf->outfile.c_str());
     }
     
+    char* sl;
+
     while (true) {
 
+        Alignment* curr_alignment = new Alignment();
         ret = fgets(line, sizeof(line), infile);
         if (!ret)
             break;
@@ -83,8 +85,9 @@ void write_output_direct() {
             continue;
         }
 
-        char* sl = strtok(line, "\t");
-        id = curr_alignment.fill(sl, pair_info);
+        sl = strtok(line, "\t");
+        id = curr_alignment->fill(sl, pair_info);
+        delete curr_alignment;
         if (id.size() == 0) {
             continue ;
         }

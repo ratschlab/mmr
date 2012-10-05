@@ -135,6 +135,7 @@ string update_line_flag(char* line, bool is_best) {
         sl = strtok(NULL, "\t");
         idx++;
     }
+    delete sl;
     return return_line.substr(1, return_line.size());
 }
 
@@ -460,7 +461,7 @@ void get_plifs_from_file() {
     }
 
     genData->plifs = plifs;
-    
+    fclose(infile);
 }
 
 double compute_mip_loss(double observed_cov, double predicted_cov, unsigned long segment_len) {
