@@ -17,7 +17,7 @@ extern Config* conf;
 
 FILE* open_bam_pipe_in(std::string & in_fname)
 {
-	string command = string("/fml/ag-raetsch/share/software/samtools-0.1.7a/samtools view -h 2> /dev/null ") + in_fname  + " && echo samtools subprocess for reading terminated successfully";
+	string command = conf->samtools + string(" view -h 2> /dev/null ") + in_fname  + " && echo samtools subprocess for reading terminated successfully";
 	FILE* IN_FP=NULL ;
 	fflush(stdout) ;
     for (int i = 0; i < 10; i++) {
@@ -31,7 +31,7 @@ FILE* open_bam_pipe_in(std::string & in_fname)
 
 FILE* open_bam_pipe_out(std::string & out_fname)
 {
-	string command = string("/fml/ag-raetsch/share/software/samtools-0.1.7a/samtools view -bS -o ") + out_fname +  " - 2> /dev/null" + " && echo samtools for writing subprocess terminated successfully";
+	string command = conf->samtools + string(" view -bS -o ") + out_fname +  " - 2> /dev/null" + " && echo samtools for writing subprocess terminated successfully";
 	FILE* OUT_FP=NULL ;
 	fflush(stdin) ;
 	OUT_FP = popen(command.c_str(), "w") ;

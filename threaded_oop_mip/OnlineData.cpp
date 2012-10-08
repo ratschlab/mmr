@@ -297,8 +297,8 @@ void OnlineData::process_data_online(GeneralData* genData) {
 
 void OnlineData::get_active_reads(string read_id, set<vector<Alignment>::iterator> &ignore_reads_left, set<vector<Alignment>::iterator> &ignore_reads_right, vector<vector<Alignment>::iterator> &active_left_reads, vector<vector<Alignment>::iterator> &active_right_reads, GeneralData* genData, bool &found_pairs) {
 
-    double insert1 = 0.0;
-    double insert2 = 0.0;
+    //double insert1 = 0.0;
+    //double insert2 = 0.0;
 
     // if pair processing, identify all compatible pairs
     // pairs are compatible, if they show same chr, opposite strands and
@@ -316,14 +316,14 @@ void OnlineData::get_active_reads(string read_id, set<vector<Alignment>::iterato
                 if (conf->pre_filter && (ignore_reads_right.find(rv_idx) != ignore_reads_right.end()))
                     continue;
                 if ((rv_idx->chr == lv_idx->chr) && (rv_idx->strand == lv_idx->strand) && (rv_idx->reversed != lv_idx->reversed)) {
-                    insert1 = abs((double) lv_idx->get_end() - (double) rv_idx->start);
-                    insert2 = abs((double) rv_idx->get_end() - (double) lv_idx->start);
-                    if (insert1 <= (conf->insert_size * (1.0 + conf->insert_dev)) || insert2 <= (conf->insert_size * (1.0 + conf->insert_dev))) {
+                    //insert1 = abs((double) lv_idx->get_end() - (double) rv_idx->start);
+                    //insert2 = abs((double) rv_idx->get_end() - (double) lv_idx->start);
+                    //if (insert1 <= (conf->insert_size * (1.0 + conf->insert_dev)) || insert2 <= (conf->insert_size * (1.0 + conf->insert_dev))) {
                         best_pair = best_pair ? best_pair : (lv_idx->is_best && rv_idx->is_best);
                         active_left_reads.push_back(lv_idx);
                         active_right_reads.push_back(rv_idx);
                         found_pairs = true;
-                    }
+                    //}
                 }
             }
         }

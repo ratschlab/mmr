@@ -33,10 +33,10 @@ Config::Config(int argc, char *argv[]) {
             use_mip_variance = true;
         } else if (!strcmp(argv[i], "-r") || !strcmp(argv[i], "--read-len")) {
             read_len = (double) atoi(argv[++i]);
-        } else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "--insert-size")) {
-            insert_size = (double) atoi(argv[++i]);
-        } else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--insert-dev")) {
-            insert_dev = (double) atof(argv[++i]);
+//        } else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "--insert-size")) {
+//            insert_size = (double) atoi(argv[++i]);
+//        } else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--insert-dev")) {
+//            insert_dev = (double) atof(argv[++i]);
         } else if (!strcmp(argv[i], "-f") || !strcmp(argv[i], "--pre-filter")) {
             pre_filter = true;
         } else if (!strcmp(argv[i], "-P") || !strcmp(argv[i], "--parse-complete")) {
@@ -54,6 +54,8 @@ Config::Config(int argc, char *argv[]) {
             exit(0);
         } else if (!strcmp(argv[i], "-o")) {
             outfile = std::string(argv[++i]);
+        } else if (!strcmp(argv[i], "-T") || !strcmp(argv[i], "--path-to-samtools")) {
+            samtools = std::string(argv[++i]);
         } else if (!strcmp(argv[i], "-z") || !strcmp(argv[i], "--zero-expect-unpred")) {
             zero_unpred = true;
         } else if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "--segmentfile")) {
@@ -95,8 +97,8 @@ void Config::print_usage(std::string prog_name) {
     // Paired Alignment options
     fprintf(stderr, "\n\tPaired alignment handling:\n");
     fprintf(stderr, "\t-p --pair-usage \tpre use pair information in the reads [off]\n");
-    fprintf(stderr, "\t-d --insert-dev \tallowed deviation from insert size (times insert size) [0.4]\n");
-    fprintf(stderr, "\t-i --insert-size \testimted insert size for paired end reads [200]\n");
+//    fprintf(stderr, "\t-d --insert-dev \tallowed deviation from insert size (times insert size) [0.4]\n");
+//    fprintf(stderr, "\t-i --insert-size \testimted insert size for paired end reads [200]\n");
     // Output Options
     fprintf(stderr, "\n\tOutput handling:\n");
     fprintf(stderr, "\t-b --best-only \t\tprint only best alignment [off]\n");
@@ -129,10 +131,10 @@ void Config::print_call(std::string prog_name) {
         fprintf(stdout, "\t use variants:         %s\n", use_variants?"on":"off");
     }
     fprintf(stdout, "\t pair usage:           %s\n", use_pair_info?"on":"off");
-    if (use_pair_info) {
-        fprintf(stdout, "\t insert size:          %.2f\n", insert_size);
-        fprintf(stdout, "\t insert size std dev:  %.2f\n", insert_dev);
-    }
+//    if (use_pair_info) {
+//        fprintf(stdout, "\t insert size:          %.2f\n", insert_size);
+//        fprintf(stdout, "\t insert size std dev:  %.2f\n", insert_dev);
+//    }
     fprintf(stdout, "\t print best only:      %s\n", print_best_only?"on":"off");
     if (use_mip_variance || ! use_mip_objective) {
         fprintf(stdout, "\t window size:          %i\n", window_size);
@@ -160,8 +162,8 @@ void Config::init() {
     iterations = 5;
     filter_distance = 1;
     intron_offset = 5;
-    insert_size = 200.0;
-    insert_dev = 0.4;
+//    insert_size = 200.0;
+//    insert_dev = 0.4;
     num_threads = 1;
     max_fifo_size = 1000;
     use_variants = false;
@@ -170,6 +172,7 @@ void Config::init() {
     lossfile = string();
     read_len = 75;
     zero_unpred = false;
+    samtools = "samtools";
 
     iteration = 0;
     last_loss = 0.0;

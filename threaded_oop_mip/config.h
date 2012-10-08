@@ -40,6 +40,7 @@ class Config {
         string outfile;
         string segmentfile;
         string lossfile;
+        string samtools;
 
         double insert_size;
         double insert_dev;

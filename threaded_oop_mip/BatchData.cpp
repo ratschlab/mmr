@@ -163,8 +163,8 @@ void BatchData::parse_file() {
 
 void BatchData::get_active_read_set() {
 
-    double insert1 = 0.0;
-    double insert2 = 0.0;
+    //double insert1 = 0.0;
+    //double insert2 = 0.0;
 
     unordered_map<string, vector<Alignment> >::iterator r_idx;
     unordered_map<string, vector<Alignment> >::iterator l_idx;
@@ -185,9 +185,9 @@ void BatchData::get_active_read_set() {
             for (vector<Alignment>::iterator lv_idx = l_idx->second.begin(); lv_idx != l_idx->second.end(); lv_idx++) {
                 for (vector<Alignment>::iterator rv_idx = r_idx->second.begin(); rv_idx != r_idx->second.end(); rv_idx++) {
                     if ((rv_idx->chr == lv_idx->chr) && (rv_idx->reversed != lv_idx->reversed)) {
-                        insert1 = abs((double) lv_idx->get_end() - (double) rv_idx->start);
-                        insert2 = abs((double) rv_idx->get_end() - (double) lv_idx->start);
-                        if (insert1 <= (conf->insert_size * (1.0 + conf->insert_dev)) || insert2 <= (conf->insert_size * (1.0 + conf->insert_dev))) {
+                        //insert1 = abs((double) lv_idx->get_end() - (double) rv_idx->start);
+                        //insert2 = abs((double) rv_idx->get_end() - (double) lv_idx->start);
+                        //if (insert1 <= (conf->insert_size * (1.0 + conf->insert_dev)) || insert2 <= (conf->insert_size * (1.0 + conf->insert_dev))) {
                             if (pair_vecs_empty) {
                                 vector<vector<Alignment>::iterator> tmp_vec;
                                 tmp_vec.push_back(lv_idx);
@@ -204,7 +204,7 @@ void BatchData::get_active_read_set() {
                                 best_pair_left = lv_idx->is_best;
                             if (! best_pair_right)
                                 best_pair_right = rv_idx->is_best;
-                        }
+                        //}
                     }
                 }
             }
