@@ -491,10 +491,8 @@ double compute_mip_loss(double observed_cov, double predicted_cov, unsigned long
 
     // determine if left or right part of function needs to be queried
     if (predicted_cov > observed_cov) {
-        //loss = ((lower->second.at(0) + upper->second.at(0)) / 2)*predicted_cov*predicted_cov + ((lower->second.at(1) + upper->second.at(1)) / 2)*predicted_cov; 
         loss = ((lower->second.at(0) + upper->second.at(0)) / 2)*diff*diff + ((lower->second.at(1) + upper->second.at(1)) / 2)*diff; 
     } else {
-        //loss = ((lower->second.at(2) + upper->second.at(2)) / 2)*predicted_cov*predicted_cov + ((lower->second.at(3) + upper->second.at(3)) / 2)*predicted_cov; 
         loss = ((lower->second.at(2) + upper->second.at(2)) / 2)*diff*diff + ((lower->second.at(3) + upper->second.at(3)) / 2)*diff; 
     }
 
