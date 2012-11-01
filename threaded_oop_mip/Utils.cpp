@@ -80,9 +80,9 @@ double get_variance(vector<unsigned int> &exon_coverage, vector<unsigned int> &i
             sum += pow((double) *it - mean, 2.0);
         }
 
-        if (intron_coverage.size() > 0) {
+       /* if (intron_coverage.size() > 0) {
             int_pnlty = intron_penalty(intron_coverage);
-        }
+        }*/
         
        // fprintf(stdout, "var: %f, intron: %f\n", (sum / ((double) exon_coverage.size() - 1.0)), int_pnlty);
         return (sum / ((double) exon_coverage.size() - 1.0)) + int_pnlty;  
@@ -261,7 +261,6 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
 
         // get all positions that are covered by the current best pair
         set <unsigned long> tmp_set;
-        //set_union(genome_pos_bl.begin(), genome_pos_bl.end(), genome_pos_br.begin(), genome_pos_br.end(), inserter(already_covered_pos, already_covered_pos.begin()));
         set_union(genome_pos_bl.begin(), genome_pos_bl.end(), genome_pos_br.begin(), genome_pos_br.end(), inserter(tmp_set, tmp_set.begin()));
         // but not by the candidate mate, if it is not best itself
         if (candidate_right->is_best) 
@@ -271,37 +270,23 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
         // loss candidate_left
         loss_cl = candidate_left->get_variance_loss(already_covered_pos, empty_set, genome_pos_cr, candidate_right->is_best);
 
+        already_covered_pos.clear();
         // but not by the candidate mate
-        if (candidate_left->is_best) {
-            already_covered_pos.clear();
+        if (candidate_left->is_best)
             set_difference(tmp_set.begin(), tmp_set.end(), genome_pos_cl.begin(), genome_pos_cl.end(), inserter(already_covered_pos, already_covered_pos.begin()));
-        } else {
+        else 
             already_covered_pos = tmp_set;
-        }
+
         // loss candidate_rigth
         loss_cr = candidate_right->get_variance_loss(already_covered_pos, empty_set, genome_pos_cl, candidate_left->is_best);
         already_covered_pos.clear();
         not_covered_pos.clear();
 
         // loss best_left and loss best_right
-       // assert(!candidate_left->is_best || !candidate_right->is_best);
-      //  if (!candidate_left->is_best && !candidate_right->is_best) {
-            set_union(genome_pos_cl.begin(), genome_pos_cl.end(), genome_pos_cr.begin(), genome_pos_cr.end(), inserter(not_covered_pos, not_covered_pos.begin()));
-            loss_bl = best_left->get_variance_loss(empty_set, not_covered_pos, genome_pos_br, true);
-            loss_br = best_right->get_variance_loss(empty_set, not_covered_pos, genome_pos_bl, true);
-        /*} else if (candidate_left->is_best) {
-            assert(candidate_left == best_left);
-            fprintf(stdout, "best_left\n");
-            loss_bl = best_left->get_variance_loss(genome_pos_cl, genome_pos_cr, genome_pos_br, true);
-            fprintf(stdout, "best_right\n");
-            loss_br = best_right->get_variance_loss(genome_pos_cl, genome_pos_cr, genome_pos_bl, true);
-        } else if (candidate_right->is_best) {
-            assert(candidate_right == best_right);
-            fprintf(stdout, "best_left\n");
-            loss_bl = best_left->get_variance_loss(genome_pos_cr, genome_pos_cl, genome_pos_br, true);
-            fprintf(stdout, "best_right\n");
-            loss_br = best_right->get_variance_loss(genome_pos_cr, genome_pos_cl, genome_pos_bl, true);
-        }*/
+        set_union(genome_pos_cl.begin(), genome_pos_cl.end(), genome_pos_cr.begin(), genome_pos_cr.end(), inserter(not_covered_pos, not_covered_pos.begin()));
+        loss_bl = best_left->get_variance_loss(empty_set, not_covered_pos, genome_pos_br, true);
+        loss_br = best_right->get_variance_loss(empty_set, not_covered_pos, genome_pos_bl, true);
+
         // determine total loss
         candidate_loss += (loss_cl.first >= 0.0) ? loss_cl.first : 0.0;
         candidate_loss += (loss_cr.first >= 0.0) ? loss_cr.first : 0.0;
