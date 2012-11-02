@@ -50,4 +50,7 @@ bedToBam=/fml/ag-raetsch/share/software/BEDTools-Version-2.16.2/bin/bedToBam
 genome=${workdir}/annotation/hg19.genome
 
 $bedToBam -bed12 -i ${outdir}/${gtf_base}.bed -g $genome > ${outdir}/${gtf_base}.bam
+
+cat ${outdir}/${gtf_base}.bed | grep -v -e polyA > ${outdir}/${gtf_base}.noPolyA.bed
+$bedToBam -bed12 -i ${outdir}/${gtf_base}.noPolyA.bed -g $genome > ${outdir}/${gtf_base}.noPolyA.bam
 echo done

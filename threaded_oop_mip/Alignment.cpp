@@ -62,6 +62,91 @@ string Alignment::fill(char* sl, unsigned char &pair) {
     return id;
 }
 
+void Alignment::fill_coverage_vectors(vector<unsigned long> &cov_keep, vector<unsigned long> &cov_change, unsigned long first_start, bool is_curr_best) {
+
+    // cov_keep -> coverage, if we keep the current best assignment
+    // cov_change -> coverage, if we change the current best assignment
+
+    vector<unsigned int>::iterator cov_idx = genData->coverage_map[ make_pair(this->chr, this->strand) ].begin();
+
+    unsigned int offset = (conf->window_size >= this->start)?this->start:conf->window_size;
+    size_t curr_pos = 0;
+
+    // set start coordinates
+    if (conf->window_size < this->start) { 
+        cov_idx += (this->start - conf->window_size);
+        curr_pos += (this->start - conf->window_size - first_start);
+    }
+
+    // get coverage from preceding windows
+    for (size_t i = 0; i < offset; i++) {
+        if (cov_idx < genData->coverage_map[ make_pair(this->chr, this->strand) ].end()) {
+
+            assert(cov_keep.size() == cov_change.size());
+
+            if (curr_pos >= cov_keep.size()) {
+                cov_keep.push_back(*cov_idx);
+                cov_change.push_back(*cov_idx);
+            }
+            cov_idx++;
+            curr_pos++;
+        } else {
+            break;
+        }
+    }
+
+    // get coverage from alignments
+    for (size_t i = 0; i < this->sizes.size(); i++) {
+        switch (this->operations.at(i)) {
+            case 'M': case 'D': { for (int j = 0; j < this->sizes.at(i); j++) {
+                                    if (cov_idx < genData->coverage_map[ make_pair(this->chr, this->strand) ].end()) {
+                                        if (this->is_best && is_curr_best) {
+                                            if (curr_pos < cov_change.size()) {
+                                                cov_change.at(curr_pos) -= 1;
+                                            } else {
+                                                cov_change.push_back((*cov_idx) - 1);
+                                                cov_keep.push_back(*cov_idx);
+                                            }
+                                        } else{
+                                            if (curr_pos < cov_change.size()) {
+                                                cov_change.at(curr_pos) += 1;
+                                            } else {
+                                                cov_change.push_back((*cov_idx) + 1);
+                                                cov_keep.push_back(*cov_idx);
+                                            }
+                                        }
+                                        cov_idx++;
+                                        curr_pos++;
+                                     }
+                                  }; 
+                                  break;
+                                }
+            case 'N': { cov_idx += this->sizes.at(i);
+                        break;
+                      }
+        }
+    }
+
+    // get coverage from following windows
+    for (size_t i = 0; i < conf->window_size; i++) {
+        if (cov_idx < genData->coverage_map[ make_pair(this->chr, this->strand) ].end()) {
+
+            assert(cov_keep.size() == cov_change.size());
+
+            if (curr_pos >= cov_change.size()) {
+                cov_change.push_back(*cov_idx);
+                cov_keep.push_back(*cov_idx);
+            }
+            cov_idx++;
+            curr_pos++;
+        }
+        else {
+            break;
+        }
+    }
+
+}
+
 pair<double, double> Alignment::get_variance_loss(set<unsigned long> covered_pos, set<unsigned long> not_covered_pos, set<unsigned long> mate_covered_pos, bool mate_is_best) {
 
     vector<unsigned int>::iterator cov_idx = genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].begin();
@@ -168,8 +253,10 @@ pair<double, double> Alignment::get_variance_loss(set<unsigned long> covered_pos
   
     // compute variance loss
     vector<unsigned int> empty_cov;
-    double loss_with = get_variance(exon_cov_with, intron_cov);
-    double loss_without = get_variance(exon_cov_without, empty_cov);
+    //double loss_with = get_variance(exon_cov_with, intron_cov);
+    //double loss_without = get_variance(exon_cov_without, empty_cov);
+    double loss_with = 0.0;
+    double loss_without = 0.0;
 
     return pair<double, double>(loss_with, loss_without);
 }
@@ -225,7 +312,7 @@ unsigned long Alignment::get_end() {
     return end == this->start?end:end - 1;
 }
 
-bool Alignment::comparator(const Alignment &left, const Alignment &right) {
+bool Alignment::compare_edit_ops(const Alignment &left, const Alignment &right) {
     return left.edit_ops < right.edit_ops;
 }
 
@@ -308,11 +395,6 @@ set<unsigned long> Alignment::get_genome_pos(unsigned int window_size) {
 
     set<unsigned long> position_set;
 
-    /*if (window_size > 0) {
-        for (unsigned long i = max(0, this->start - window_size); i < this->start; i++) {
-            position_set.insert(i);
-        }
-    }*/
     unsigned long genome_pos = this->start;
     for (size_t i = 0; i < this->operations.size(); i++) {
         if (this->operations.at(i) == 'M' || this->operations.at(i) == 'D') {
@@ -323,11 +405,6 @@ set<unsigned long> Alignment::get_genome_pos(unsigned int window_size) {
             genome_pos += this->sizes.at(i);
         }
     }
-    /*if (window_size > 0) {
-        for (unsigned long i = genome_pos; i < genData->chr_size.at(this->chr); i++) {
-            position_set.insert(i);
-        }
-    }*/
 
     return position_set;
 }
