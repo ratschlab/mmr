@@ -23,7 +23,7 @@ void parse_cigar(string cigar, vector<char> &operations, vector<int> &sizes);
 
 double intron_penalty(vector<unsigned int> &intron_coverage);
 
-double get_variance(vector<unsigned int> &exon_coverage, vector<unsigned int> &intron_coverage);
+double get_variance(vector<unsigned long> &exon_coverage);
 
 vector<unsigned int> alter_coverage(vector<unsigned int> &source, unsigned int window_left, unsigned int window_right, bool is_positive);
 
