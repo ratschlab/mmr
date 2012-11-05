@@ -76,12 +76,22 @@ void Alignment::fill_coverage_vectors(vector<unsigned long> &cov_keep, vector<un
 
     // set start coordinates
     if (conf->window_size < this->start) { 
-        cov_idx += (this->start - conf->window_size);
+        fprintf(stdout, "this start: %lu\n", this->start);
+        fprintf(stdout, "window %i\n", conf->window_size);
+        fprintf(stdout, "diff %lu\n", this->start - conf->window_size);
+        advance(cov_idx, this->start - conf->window_size);
         curr_pos += (this->start - conf->window_size - first_start);
+        fprintf(stdout, "first start %lu\n", first_start);
+        fprintf(stdout, "curr_pos %lu\n", curr_pos);
     }
 
     // lock coverage map
     pthread_mutex_lock(&mutex_coverage);
+    fprintf(stdout, "Coverage:\n");
+    for (vector<unsigned int>::iterator tt = genData->coverage_map[ make_pair(this->chr, this->strand) ].begin(); tt != genData->coverage_map[ make_pair(this->chr, this->strand) ].end(); tt++) {
+        fprintf(stdout, "%u ", *tt);
+    }
+    fprintf(stdout, "\n\n");
 
     // get coverage from preceding windows
     for (size_t i = 0; i < offset; i++) {
@@ -90,6 +100,7 @@ void Alignment::fill_coverage_vectors(vector<unsigned long> &cov_keep, vector<un
             assert(cov_keep.size() == cov_change.size());
 
             if (curr_pos >= cov_keep.size()) {
+                fprintf(stdout, "curr pos: %i\n", curr_pos);
                 cov_keep.push_back(*cov_idx);
                 cov_change.push_back(*cov_idx);
             }
@@ -107,8 +118,10 @@ void Alignment::fill_coverage_vectors(vector<unsigned long> &cov_keep, vector<un
                                     if (cov_idx < genData->coverage_map[ make_pair(this->chr, this->strand) ].end()) {
                                         if (this->is_best && is_curr_best) {
                                             if (curr_pos < cov_change.size()) {
+                                                fprintf(stdout, "changed %lu to %lu\n", cov_change.at(curr_pos), cov_change.at(curr_pos) - 1);
                                                 cov_change.at(curr_pos) -= 1;
                                             } else {
+                                                assert(*cov_idx > 0);
                                                 cov_change.push_back((*cov_idx) - 1);
                                                 cov_keep.push_back(*cov_idx);
                                             }
@@ -120,6 +133,7 @@ void Alignment::fill_coverage_vectors(vector<unsigned long> &cov_keep, vector<un
                                                 cov_keep.push_back(*cov_idx);
                                             }
                                         }
+                                        fprintf(stdout, "curr pos: %i\n", curr_pos);
                                         cov_idx++;
                                         curr_pos++;
                                      }
@@ -141,6 +155,7 @@ void Alignment::fill_coverage_vectors(vector<unsigned long> &cov_keep, vector<un
             if (curr_pos >= cov_change.size()) {
                 cov_change.push_back(*cov_idx);
                 cov_keep.push_back(*cov_idx);
+                fprintf(stdout, "curr pos: %i\n", curr_pos);
             }
             cov_idx++;
             curr_pos++;
@@ -151,6 +166,17 @@ void Alignment::fill_coverage_vectors(vector<unsigned long> &cov_keep, vector<un
     }
     // unlock coverage map
     pthread_mutex_unlock(&mutex_coverage);
+
+    fprintf(stdout, "keep:\n");
+    for (size_t uu = 0; uu < cov_keep.size(); uu++) {
+        fprintf(stdout, "%lu ", cov_keep.at(uu));
+    }
+    fprintf(stdout, "\n");
+    fprintf(stdout, "change:\n");
+    for (size_t uu = 0; uu < cov_change.size(); uu++) {
+        fprintf(stdout, "%lu ", cov_change.at(uu));
+    }
+    fprintf(stdout, "\n\n");
 
 }
 
