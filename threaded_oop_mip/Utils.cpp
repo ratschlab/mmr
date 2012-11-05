@@ -69,11 +69,9 @@ double get_variance(vector<unsigned int> &exon_coverage, vector<unsigned int> &i
     } else {
         double sum = 0.0;
         double int_pnlty = 0.0;
-        /*for ( vector<unsigned int>::iterator it = exon_coverage.begin(); it != exon_coverage.end(); it++) {
+        for ( vector<unsigned int>::iterator it = exon_coverage.begin(); it != exon_coverage.end(); it++) {
             sum += (double) *it;
-            fprintf(stdout, "%i ", *it);
         }
-        fprintf(stdout, "\n");*/
         double mean = sum / (double) exon_coverage.size();
         sum = 0.0;
         for ( vector<unsigned int>::iterator it = exon_coverage.begin(); it != exon_coverage.end(); it++) {
