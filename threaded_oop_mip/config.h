@@ -35,6 +35,7 @@ class Config {
         unsigned char filter_distance;
 
         int intron_offset;
+        int max_gen_frag_size;
 
         string infile;
         string outfile;
@@ -42,7 +43,6 @@ class Config {
         string lossfile;
         string samtools;
 
-        double insert_size;
         double insert_dev;
 
         int iteration;

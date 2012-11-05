@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "assert.h"
 #include "Alignment.h"
 #include "Utils.h"
@@ -78,6 +80,9 @@ void Alignment::fill_coverage_vectors(vector<unsigned long> &cov_keep, vector<un
         curr_pos += (this->start - conf->window_size - first_start);
     }
 
+    // lock coverage map
+    pthread_mutex_lock(&mutex_coverage);
+
     // get coverage from preceding windows
     for (size_t i = 0; i < offset; i++) {
         if (cov_idx < genData->coverage_map[ make_pair(this->chr, this->strand) ].end()) {
@@ -144,6 +149,8 @@ void Alignment::fill_coverage_vectors(vector<unsigned long> &cov_keep, vector<un
             break;
         }
     }
+    // unlock coverage map
+    pthread_mutex_unlock(&mutex_coverage);
 
 }
 
@@ -203,14 +210,14 @@ bool Alignment::compare_edit_ops(const Alignment &left, const Alignment &right) 
 }
 
 bool Alignment::is_spliced() {
-    bool spliced = false;
+/*    bool spliced = false;
     for (vector<char>::iterator it = this->operations.begin(); it != this->operations.end(); it++) {
         if ((*it) == 'N') {
             spliced = true;
             break;
         }
-    }
-    return spliced;
+    }*/
+    return find(this->operations.begin(), this->operations.end(), 'N') != this->operations.end();
 }
 
 vector< pair<unsigned long, unsigned int> > Alignment::get_intron_coords() {

@@ -47,4 +47,6 @@ void add_zero_segments();
 
 void compute_coverage_loss(vector<pair<vector<Alignment>::iterator,bool> > aligns, vector<unsigned long> &cov_keep, vector<unsigned long> &cov_change);
 
+bool pair_is_valid(vector<Alignment>::iterator first, vector<Alignment>::iterator second);
+
 #endif

@@ -33,8 +33,8 @@ Config::Config(int argc, char *argv[]) {
             use_mip_variance = true;
         } else if (!strcmp(argv[i], "-r") || !strcmp(argv[i], "--read-len")) {
             read_len = (double) atoi(argv[++i]);
-//        } else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "--insert-size")) {
-//            insert_size = (double) atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "--max-fragment-size")) {
+            max_gen_frag_size = atoi(argv[++i]);
 //        } else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--insert-dev")) {
 //            insert_dev = (double) atof(argv[++i]);
         } else if (!strcmp(argv[i], "-f") || !strcmp(argv[i], "--pre-filter")) {
@@ -98,7 +98,7 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\n\tPaired alignment handling:\n");
     fprintf(stderr, "\t-p --pair-usage \tpre use pair information in the reads [off]\n");
 //    fprintf(stderr, "\t-d --insert-dev \tallowed deviation from insert size (times insert size) [0.4]\n");
-//    fprintf(stderr, "\t-i --insert-size \testimted insert size for paired end reads [200]\n");
+    fprintf(stderr, "\t-i --max-fragment-size \tupper limit of GENOMIC fragment length [1 000 000]\n");
     // Output Options
     fprintf(stderr, "\n\tOutput handling:\n");
     fprintf(stderr, "\t-b --best-only \t\tprint only best alignment [off]\n");
@@ -131,10 +131,10 @@ void Config::print_call(std::string prog_name) {
         fprintf(stdout, "\t use variants:         %s\n", use_variants?"on":"off");
     }
     fprintf(stdout, "\t pair usage:           %s\n", use_pair_info?"on":"off");
-//    if (use_pair_info) {
-//        fprintf(stdout, "\t insert size:          %.2f\n", insert_size);
+    if (use_pair_info) {
+        fprintf(stdout, "\t max frag size size:   %i\n", max_gen_frag_size);
 //        fprintf(stdout, "\t insert size std dev:  %.2f\n", insert_dev);
-//    }
+    }
     fprintf(stdout, "\t print best only:      %s\n", print_best_only?"on":"off");
     if (use_mip_variance || ! use_mip_objective) {
         fprintf(stdout, "\t window size:          %i\n", window_size);
@@ -162,7 +162,7 @@ void Config::init() {
     iterations = 5;
     filter_distance = 1;
     intron_offset = 5;
-//    insert_size = 200.0;
+    max_gen_frag_size = 1000000;
 //    insert_dev = 0.4;
     num_threads = 1;
     max_fifo_size = 1000;

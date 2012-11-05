@@ -69,6 +69,9 @@ double get_variance(vector<unsigned long> &exon_coverage) {
         return 0.0;
     } else {
         double sum = 0.0;
+        for ( vector<unsigned long>::iterator it = exon_coverage.begin(); it != exon_coverage.end(); it++) {
+            sum += (double) *it;
+        }
         double mean = sum / (double) exon_coverage.size();
         sum = 0.0;
         for ( vector<unsigned long>::iterator it = exon_coverage.begin(); it != exon_coverage.end(); it++) {
@@ -596,3 +599,22 @@ void add_zero_segments() {
     if (conf->verbose)
         fprintf(stdout, "... done.\n\n");
 }
+
+bool pair_is_valid(vector<Alignment>::iterator align1, vector<Alignment>::iterator align2) {
+
+    // check for same chromosome, same strand and opposite orientation 
+    if ( (align1->chr != align2->chr) || (align1->strand != align2->strand) || (align1->reversed == align2->reversed) )
+        return false;
+    
+    // check for fragment size limit
+    int frag_size = max( abs( (int) align1->get_end() - (int) align2->start), abs( (int) align2->get_end() - (int) align1->start));
+    if (frag_size >= conf->max_gen_frag_size)
+        return false;
+
+    //if (align1->is_spliced || align2->is_spliced) {
+   // }
+            
+    return true;
+}
+
+
