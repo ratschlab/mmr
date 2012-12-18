@@ -27,12 +27,14 @@ labels_rquant = {};
 labels_cuff = {};
 
 for n_idx = 1:length(noise_levels),
+
+    noise = noise_levels{n_idx};
     labels_cuff{end + 1} = [' Cufflinks ' noise];
     labels_rquant{end + 1} = [' rQuant ' noise];
+
     for e_idx = 1:length(experiments),
 
         which_set = experiments{e_idx};
-        noise = noise_levels{n_idx};
 
         fprintf(1, 'Evaluating %s %s\n====================\n\n', which_set, noise);
 
@@ -41,8 +43,11 @@ for n_idx = 1:length(noise_levels),
         if ~isfield(genes, 'expr_orig'),
             error(sprintf('Gene structure %s/genes.mat lacks expression information\n', experiment));
         end;
-        if ~isfield(genes, 'multi_frac'),
-            genes = add_multimap_info(sprintf('%s/genes.mat', experiment), sprintf('%s/hg19_subsample_%s_genes.gtf.fastq.gz.mapped.2', experiment, gene_num));
+        if ~isfield(genes, 'multi_frac_tophat'),
+            genes = add_multimap_info_tophat(sprintf('%s/genes.mat', experiment), sprintf('%s/tophat/hg19_subsample_%s_genes.gtf.fastq.gz/accepted_hits', experiment, gene_num));
+        end;
+        if ~isfield(genes, 'transcript_length'),
+            genes = add_transcript_length(sprintf('%s/genes.mat', experiment));
         end;
 
         art_orig = genes;
@@ -50,13 +55,23 @@ for n_idx = 1:length(noise_levels),
         %%% extract all transcripts and their IDs from the gene structure
         art.IDs = [art_orig(:).transcripts]';
         art.expr = [art_orig(:).expr_orig]';
+        art.lengths = [art_orig(:).transcript_length]';
 
         %%% sort by transcript ID
         [art.IDs, s_idx] = sort(art.IDs);
         art.expr = art.expr(s_idx);
+        art.lengths = art.lengths(s_idx);
 
         %%% load cufflinks results
-        pred = importdata(sprintf('%s/cufflinks/%s/transcripts.counts', experiment, which_set));
+        f_tag = ['.' which_set];
+        if strcmp(f_tag, '.unfiltered')
+            f_tag = '';
+        end;
+        n_tag = [noise '.'];
+        if strcmp(n_tag, '.'),
+            n_tag = '';
+        end;
+        pred = importdata(sprintf('%s/tophat/hg19_%ssubsample_%s_genes.gtf.%sfastq.gz/cufflinks/%s/transcripts.counts', experiment, chrms, gene_num, n_tag, which_set));
         pred.textdata = pred.textdata(2:end, :); %% textdata -> 1 genes, 2 transcripts; data -> 1 FPKM, 2 cov
 
         %%% remove NaNs
@@ -73,23 +88,25 @@ for n_idx = 1:length(noise_levels),
         [tmp s1 s2] = intersect(art.IDs, pred.textdata(:, 2));
         art.IDs = art.IDs(s1);
         art.expr = art.expr(s1);
+        art.lengths = art.lengths(s1);
         pred.textdata = pred.textdata(s2, :);
         pred.data = pred.data(s2, :);
 
         %%% TODO Cufflinks uses rpkms
-        [r_p p_p] = corr(art.expr, pred.data(:, 1), 'type', 'Pearson');
-        [r_s p_s] = corr(art.expr, pred.data(:, 1), 'type', 'Spearman');
+        [r_p p_p] = corr(art.expr, pred.data(:, 1) .* art.lengths, 'type', 'Pearson');
+        [r_s p_s] = corr(art.expr, pred.data(:, 1) .* art.lengths, 'type', 'Spearman');
         pearson_cuff(n_idx, e_idx) = r_p;
         spearman_cuff(n_idx, e_idx) = r_s;
         %fprintf(1, 'Cufflinks (Pearson / Spearman):\n\ttranscripts: %i (%i)\n\tr: %f / %f\n\tp:%f / %f\n\n', size(art.data, 1), size(art_orig.data, 1), r_p, r_s, p_p, p_s);
         fprintf(1, 'Cufflinks (Pearson / Spearman):\n\ttranscripts: %i (%i)\n\tr: %f / %f\n\n', size(art.expr, 1), size([art_orig(:).transcripts]', 1), r_p, r_s);
 
-        for perc = [0.05 0.1 0.15 0.2 0.25],
+        %for perc = [0.05 0.1 0.15 0.2 0.25],
+        for perc = [0.1 1.0],
 
             %%% extract all transcripts and their IDs from the gene structure
             art.IDs = [art_orig(:).transcripts]';
             art.expr = [art_orig(:).expr_orig]';
-            art.multi_frac = [art_orig(:).multi_frac]';
+            art.multi_frac = [art_orig(:).multi_frac_tophat]';
 
             %%% filter by mm percentile
             [art.multi_frac s_idx] = sort(art.multi_frac, 1, 'descend');
@@ -107,16 +124,12 @@ for n_idx = 1:length(noise_levels),
             %%% load rQuant data
             d_tag = which_set;
             n_tag = [noise '.'];
-            f_tag = [which_set '.'];
-            if strcmp(f_tag, 'unfiltered.')
-                f_tag = '';
-            end;
             if strcmp(n_tag, '.'),
                 n_tag = '';
             else
                 d_tag = [d_tag '.' noise];
             end;
-            load(sprintf('%s/rquant/%s/hg19_%ssubsample_%s_genes.gtf.%sfastq.gz.mapped.2.%ssorted_rquant.mat', experiment, d_tag, chrms, gene_num, n_tag, f_tag));
+            load(sprintf('%s/tophat/hg19_%ssubsample_%s_genes.gtf.%sfastq.gz/rquant/%s/accepted_hits%s_rquant.mat', experiment, chrms, gene_num, n_tag, d_tag, f_tag));
 
             %%% extract transcript info
             pred = struct();

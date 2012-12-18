@@ -12,7 +12,7 @@ function run_rquant_tophat(experiment, noise)
 
     if nargin < 1,
         %experiments = {'mmr0', 'mmr1', 'unfiltered', 'best'};
-        experiments = {'mmr0', 'unfiltered', 'best', 'best2'};
+        experiments = {'mmr0', 'unfiltered', 'best'};
         %experiments = {'mmr0'};
     else
         experiments = {experiment};
@@ -117,7 +117,7 @@ function run_rquant_tophat(experiment, noise)
                     [s m mid] = mkdir(PAR.output_dir);
                     assert(s);
                 else
-                    fprintf(1, '%s already exists - skipping!', PAR.output_dir);
+                    fprintf(1, '%s already exists - skipping!\n', PAR.output_dir);
                     continue;
                 end
                 PAR.profiles_fn = sprintf('%s/profiles.mat', PAR.output_dir);

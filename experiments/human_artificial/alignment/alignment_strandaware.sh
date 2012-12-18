@@ -83,6 +83,12 @@ then
             export protocol="second"
 			export GMPAR=" -M 10 -G 2 -E 10 -l 10 -L 20 -K 12 -C 30 -I 200000 -NI 2 -SA 100 -CT 50 -a -S -seed-hit-cancel-threshold 1000 -report-map-read -report-spliced-read -report-map-region -report-splice-sites 0.95 -filter-max-mismatches 0 -filter-max-gaps 0 -filter-splice-region 5 -qpalma-use-map-max-len 2000 -f bamn -samtools /fml/ag-raetsch/share/software/samtools/ -polytrim 40 -qpalma-prb-offset-fix -min-spliced-segment-len 8 -junction-remapping-coverage 2 -junction-remapping $junctionsfile -score-annotated-splice-sites $junctionsfile -acc $ACC/pred/contig_%i%c -don $DON/pred/contig_%i%c -report-splice-sites-top-perc 0.01 -QMM 7 -max-dp-deletions 3"
 			;;
+		3)
+            junctionsfile="../../anno.align.8.junctions"
+            echo use junctionsfile: $junctionsfile
+            export protocol="second"
+			export GMPAR=" -M 6 -G 2 -E 6 -l 10 -L 20 -K 12 -C 30 -I 200000 -NI 2 -SA 100 -CT 50 -a -S -seed-hit-cancel-threshold 1000 -report-map-read -report-spliced-read -report-map-region -report-splice-sites 0.95 -filter-max-mismatches 0 -filter-max-gaps 0 -filter-splice-region 5 -qpalma-use-map-max-len 2000 -f bamn -samtools /fml/ag-raetsch/share/software/samtools/ -polytrim 40 -qpalma-prb-offset-fix -min-spliced-segment-len 8 -junction-remapping-coverage 2 -junction-remapping $junctionsfile -score-annotated-splice-sites $junctionsfile -acc $ACC/pred/contig_%i%c -don $DON/pred/contig_%i%c -report-splice-sites-top-perc 0.01 -QMM 7 -max-dp-deletions 3"
+			;;
 		
 	esac
 	if [ ! -f $QPALMAPAR ]

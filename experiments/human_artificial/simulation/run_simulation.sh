@@ -55,7 +55,7 @@ echo "LIB_FILE_NAME ${outdir}/${gtf_base}.lib" >> $flux_par_file
 echo "PRO_FILE_NAME ${outdir}/${gtf_base}.pro" >> $flux_par_file
 echo "SEQ_FILE_NAME ${outdir}/${gtf_base}.bed" >> $flux_par_file
 
-$flux --log DEBUG --force -p $flux_par_file &> ${workdir}/flux_sim_${genes}_genes_${size}_reads.log
+$flux --log DEBUG --force -p $flux_par_file &> ${workdir}/log_flux/flux_sim_${genes}_genes_${size}_reads.log
 
 cat ${outdir}/${gtf_base}.bed | grep -v -e polyA > ${outdir}/${gtf_base}.noPolyA.bed
 

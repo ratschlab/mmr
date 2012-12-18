@@ -4,8 +4,8 @@ function genes = add_multimap_info(filename, bam_name_stub)
 
     load(filename);
 
-    bam_mm = [bam_name_stub, '.multimappers.sorted.bam'];
-    bam_unf = [bam_name_stub, '.sorted.bam'];
+    bam_mm = [bam_name_stub, '.multimappers.bam'];
+    bam_unf = [bam_name_stub, '.bam'];
 
     for i = 1:length(genes),
         if mod(i, 10) == 0,
@@ -31,9 +31,9 @@ function genes = add_multimap_info(filename, bam_name_stub)
         end;
         unf_reads = size(reads1, 1);
 
-        genes(i).multi_frac = zeros(1, length(genes(i).transcripts));
+        genes(i).multi_frac_tophat = zeros(1, length(genes(i).transcripts));
         if unf_reads > 0,
-            genes(i).multi_frac(:) = deal(mm_reads / unf_reads);
+            genes(i).multi_frac_tophat(:) = deal(mm_reads / unf_reads);
         end;
     end;
 

@@ -16,9 +16,9 @@ counter_uf=0
 counter_fi=0
 
 
-for file in *.log.2;
+for file in *.log.${stage};
 do
-    if [ -z "`cat ${file%log.$stage}log.2 | grep -e \"samtools subprocess terminated successfully\"`" ]
+    if [ -z "`cat ${file} | grep -e \"samtools subprocess terminated successfully\"`" ]
     then 
         echo $file
         counter_uf=$(($counter_uf + 1))
