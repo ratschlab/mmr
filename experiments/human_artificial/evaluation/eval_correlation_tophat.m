@@ -93,8 +93,8 @@ for n_idx = 1:length(noise_levels),
         pred.data = pred.data(s2, :);
 
         %%% TODO Cufflinks uses rpkms
-        [r_p p_p] = corr(art.expr, pred.data(:, 1) .* art.lengths, 'type', 'Pearson');
-        [r_s p_s] = corr(art.expr, pred.data(:, 1) .* art.lengths, 'type', 'Spearman');
+        [r_p p_p] = corr(art.expr, pred.data(:, 1) .* art.lengths ./ 1000, 'type', 'Pearson');
+        [r_s p_s] = corr(art.expr, pred.data(:, 1) .* art.lengths ./ 1000, 'type', 'Spearman');
         pearson_cuff(n_idx, e_idx) = r_p;
         spearman_cuff(n_idx, e_idx) = r_s;
         %fprintf(1, 'Cufflinks (Pearson / Spearman):\n\ttranscripts: %i (%i)\n\tr: %f / %f\n\tp:%f / %f\n\n', size(art.data, 1), size(art_orig.data, 1), r_p, r_s, p_p, p_s);

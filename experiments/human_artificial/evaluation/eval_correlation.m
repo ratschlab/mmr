@@ -4,7 +4,8 @@ gene_num = '5000';
 
 %noise_levels = {'noise0.01', 'noise0.02', 'noise0.03', ''};
 noise_levels = {''};
-experiments = {'unfiltered', 'best', 'mmr0'};
+%experiments = {'unfiltered', 'best', 'mmr0'};
+experiments = {'unfiltered', 'best'};
 
 experiment = [gene_num '_genes_' readnum '_reads'];
 
@@ -27,12 +28,12 @@ labels_rquant = {};
 labels_cuff = {};
 
 for n_idx = 1:length(noise_levels),
+    noise = noise_levels{n_idx};
     labels_cuff{end + 1} = [' Cufflinks ' noise];
     labels_rquant{end + 1} = [' rQuant ' noise];
     for e_idx = 1:length(experiments),
 
         which_set = experiments{e_idx};
-        noise = noise_levels{n_idx};
 
         fprintf(1, 'Evaluating %s %s\n====================\n\n', which_set, noise);
 
@@ -84,7 +85,7 @@ for n_idx = 1:length(noise_levels),
         %fprintf(1, 'Cufflinks (Pearson / Spearman):\n\ttranscripts: %i (%i)\n\tr: %f / %f\n\tp:%f / %f\n\n', size(art.data, 1), size(art_orig.data, 1), r_p, r_s, p_p, p_s);
         fprintf(1, 'Cufflinks (Pearson / Spearman):\n\ttranscripts: %i (%i)\n\tr: %f / %f\n\n', size(art.expr, 1), size([art_orig(:).transcripts]', 1), r_p, r_s);
 
-        for perc = [0.05 0.1 0.15 0.2 0.25],
+        for perc = [0.05 0.1 1.0], %0.15 0.2 0.25],
 
             %%% extract all transcripts and their IDs from the gene structure
             art.IDs = [art_orig(:).transcripts]';
@@ -116,7 +117,7 @@ for n_idx = 1:length(noise_levels),
             else
                 d_tag = [d_tag '.' noise];
             end;
-            load(sprintf('%s/rquant/%s/hg19_%ssubsample_%s_genes.gtf.%sfastq.gz.mapped.2.%ssorted_rquant.mat', experiment, d_tag, chrms, gene_num, n_tag, f_tag));
+            load(sprintf('%s/rquant/%s/hg19_%ssubsample_%s_genes.gtf.%sfastq.gz.mapped.3.%ssorted_rquant.mat', experiment, d_tag, chrms, gene_num, n_tag, f_tag));
 
             %%% extract transcript info
             pred = struct();

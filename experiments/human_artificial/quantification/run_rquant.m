@@ -5,15 +5,16 @@ function run_rquant(experiment, noise)
     addpath('~/git/tools/genomes');
     addpath('~/git/software/rQuant/src');
 
-    exp_size ='5000002';
+    exp_size ='15000000';
     genenum = '5000';
     %chrms = 'chr2_chr3_chr4_';
     chrms = '';
+    stage = 3;
 
     if nargin < 1,
         %experiments = {'mmr0', 'mmr1', 'unfiltered', 'best'};
         %experiments = {'mmr0', 'unfiltered', 'best'};
-        experiments = {'mmr0'};
+        experiments = {'unfiltered', 'best'};
     else
         experiments = {experiment};
     end;
@@ -38,7 +39,7 @@ function run_rquant(experiment, noise)
             if ~isempty(noise)
                 n_tag = [noise '.'];
             end;
-            CFG.exp = {{sprintf('hg19_%ssubsample_%s_genes.gtf.%sfastq.gz.mapped.2.%ssorted', chrms, genenum, n_tag, f_tag)}};
+            CFG.exp = {{sprintf('hg19_%ssubsample_%s_genes.gtf.%sfastq.gz.mapped.%i.%ssorted', chrms, genenum, n_tag, stage, f_tag)}};
 
             PAR.CFG.read_len = 75;
             PAR.CFG.VERBOSE = 1;
