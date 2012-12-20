@@ -47,6 +47,8 @@ Config::Config(int argc, char *argv[]) {
             window_size = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--threads")) {
             num_threads = atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "-L") || !strcmp(argv[i], "--max_list_length")) {
+            max_list_length = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-I") || !strcmp(argv[i], "--iterations")) {
             iterations = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
@@ -130,6 +132,7 @@ void Config::print_call(std::string prog_name) {
         fprintf(stdout, "\t filter dist:          %i\n", filter_distance);
         fprintf(stdout, "\t use variants:         %s\n", use_variants?"on":"off");
     }
+    fprintf(stdout, "\t max list length:      %i\n", max_list_length);
     fprintf(stdout, "\t pair usage:           %s\n", use_pair_info?"on":"off");
 //    if (use_pair_info) {
 //        fprintf(stdout, "\t insert size:          %.2f\n", insert_size);
@@ -166,6 +169,7 @@ void Config::init() {
 //    insert_dev = 0.4;
     num_threads = 1;
     max_fifo_size = 1000;
+    max_list_length = 100;
     use_variants = false;
     use_mip_variance = false;
     segmentfile = string();

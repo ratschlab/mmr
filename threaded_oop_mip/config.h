@@ -32,6 +32,7 @@ class Config {
         unsigned int num_threads;
         unsigned int max_fifo_size;
         unsigned int read_len;
+        unsigned int max_list_length;
         unsigned char filter_distance;
 
         int intron_offset;

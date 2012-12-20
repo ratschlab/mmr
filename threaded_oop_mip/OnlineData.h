@@ -5,6 +5,7 @@
 #include <vector>
 #include <set>
 #include <cstdio>
+#include <time.h>
 
 #include "GeneralData.h"
 #include "Alignment.h"
@@ -28,6 +29,6 @@ public:
 
     void get_active_reads(string read_id, set<vector<Alignment>::iterator> &ignore_reads_left, set<vector<Alignment>::iterator> &ignore_reads_right, vector<vector<Alignment>::iterator> &active_left_reads, vector<vector<Alignment>::iterator> &active_right_reads, GeneralData* genData, bool &found_pairs);
 
-    char* parse_file(FILE* infile, char* last_line, GeneralData* genData, unsigned int &counter);
+    char* parse_file(FILE* infile, char* last_line, GeneralData* genData, unsigned int &counter, clock_t &start_clock, clock_t &start_time);
 };
 #endif

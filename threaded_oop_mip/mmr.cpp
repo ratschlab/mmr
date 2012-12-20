@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <pthread.h>
+#include <time.h>
 
 #include <unordered_map>
 #include <map>
@@ -416,8 +417,11 @@ int main(int argc, char *argv[]) {
             genData->num_altered = 0;
 
             string last_id = string("");
+            clock_t start_clock = clock();
+            clock_t start_time = time(NULL);
+
             // fill FIFO
-            while ((ret = data->parse_file(infile, last_line, genData, counter)) || data->left_reads.size() > 0 || data->right_reads.size() > 0) {
+            while ((ret = data->parse_file(infile, last_line, genData, counter, start_clock, start_time)) || data->left_reads.size() > 0 || data->right_reads.size() > 0) {
                 
                 // check if we use the first pass only to fill coverager map and infer zero predicted segments
                 if (iteration > 0 || !conf->zero_unpred) {

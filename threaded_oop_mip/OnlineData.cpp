@@ -1,6 +1,7 @@
 
 #include <assert.h>
 #include <limits>
+#include <time.h>
 
 #include "OnlineData.h"
 #include "Utils.h"
@@ -36,40 +37,48 @@ void OnlineData::process_data_online(GeneralData* genData) {
     double loss = 0.0;
     bool found_pairs = false;
 
+    // if the number of left_reads or right_reads is longer than
+    // the maximum allowed nober of mappings per reads, ignore the
+    // the read - the first alignment will be the best
+    if (this->left_reads.size() > conf->max_list_length || this->right_reads.size() > conf->max_list_length) {
+        delete this;
+        return;
+    }
+
     if (conf->pre_filter) {
         ignore_idx_left = filter_alignments(this->left_reads);
-        pthread_mutex_lock(&mutex_best_left);
         if (ignore_idx_left.find(this->left_reads.begin() + genData->best_left[this->last_id]) != ignore_idx_left.end()) {
             vector<Alignment>::iterator curr_align = (this->left_reads.begin() + genData->best_left[this->last_id]);
             curr_align->is_best = false;
             curr_align->update_coverage_map(0);
             for (vector<Alignment>::iterator v_idx = this->left_reads.begin(); v_idx != this->left_reads.end(); v_idx++) {
                 if (ignore_idx_left.find(v_idx) == ignore_idx_left.end()) {
+                    pthread_mutex_lock(&mutex_best_left);
                     genData->best_left[this->last_id] = v_idx - this->left_reads.begin();
+                    pthread_mutex_unlock(&mutex_best_left);
                     v_idx->is_best = true;
                     v_idx->update_coverage_map(1);
                     break;
                 }
             }
         }
-        pthread_mutex_unlock(&mutex_best_left);
 
         ignore_idx_right = filter_alignments(this->right_reads);
-        pthread_mutex_lock(&mutex_best_right);
         if (ignore_idx_right.find(this->right_reads.begin() + genData->best_right[this->last_id]) != ignore_idx_right.end()) {
             vector<Alignment>::iterator curr_align = (this->right_reads.begin() + genData->best_right[this->last_id]);
             curr_align->is_best = false;
             curr_align->update_coverage_map(0);
             for (vector<Alignment>::iterator v_idx = this->right_reads.begin(); v_idx != this->right_reads.end(); v_idx++) {
                 if (ignore_idx_right.find(v_idx) == ignore_idx_right.end()) {
+                    pthread_mutex_lock(&mutex_best_right);
                     genData->best_right[this->last_id] = v_idx - this->right_reads.begin();
+                    pthread_mutex_unlock(&mutex_best_right);
                     v_idx->is_best = true;
                     v_idx->update_coverage_map(1);
                     break;
                 }
             }
         }
-        pthread_mutex_unlock(&mutex_best_right);
     }
 
     get_active_reads(this->last_id, ignore_idx_left, ignore_idx_right, active_left_reads, active_right_reads, genData, found_pairs);
@@ -354,8 +363,8 @@ void OnlineData::get_active_reads(string read_id, set<vector<Alignment>::iterato
             active_right_reads.front()->is_best = true;
             active_right_reads.front()->update_coverage_map(1);
 
-            pthread_mutex_lock(&mutex_best_right);
             assert(active_right_reads.front() - this->right_reads.begin() >= 0);
+            pthread_mutex_lock(&mutex_best_right);
             genData->best_right[read_id] = (active_right_reads.front() - this->right_reads.begin());
             pthread_mutex_unlock(&mutex_best_right);
         }
@@ -388,7 +397,7 @@ void OnlineData::get_active_reads(string read_id, set<vector<Alignment>::iterato
     }
 }
 
-char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData, unsigned int &counter) {
+char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData, unsigned int &counter, clock_t &start_clock, clock_t &start_time) {
 
     char line[1000] ;
     char cp_line[1000];
@@ -414,8 +423,11 @@ char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData
             ret = fgets(line, sizeof(line), infile);
             counter++;
 
-            if (conf->verbose && counter % 100000 == 0) 
-                fprintf(stdout, "\n\t%i...", counter);
+            if (conf->verbose && counter % 100000 == 0)  {
+                fprintf(stdout, "\n\t%i (took %f secs / %f clocks) ...", counter, (double) (time(NULL) - start_time), (double) (clock() - start_clock));
+                start_clock = clock();
+                start_time = time(NULL);
+            }
         }
 
         strcpy(cp_line, line);
