@@ -47,6 +47,8 @@ Config::Config(int argc, char *argv[]) {
             window_size = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--threads")) {
             num_threads = atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "-L") || !strcmp(argv[i], "--max_list_length")) {
+            max_list_length = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-I") || !strcmp(argv[i], "--iterations")) {
             iterations = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
@@ -118,27 +120,30 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\n\tGeneral:\n");
     fprintf(stderr, "\t-v --verbose \t\tswitch on verbose output [off]\n");
     fprintf(stderr, "\t-h --help \t\tprint usage info\n");
+    fprintf(stderr, "\n");
 }
 
 void Config::print_call(std::string prog_name) {
     fprintf(stdout, "%s has been started with the following parameters:\n\n", prog_name.c_str());
     fprintf(stdout, "\t input file:           %s\n", infile.c_str()); 
     fprintf(stdout, "\t output file:          %s\n", outfile.c_str()); 
-    fprintf(stdout, "\t strand specific:      %s\n", pre_filter?"yes":"no");
+    fprintf(stdout, "\t strand specific:      %s\n", strand_specific?"yes":"no");
     fprintf(stdout, "\t pre filter:           %s\n", pre_filter?"on":"off");
     if (pre_filter) {
         fprintf(stdout, "\t filter dist:          %i\n", filter_distance);
         fprintf(stdout, "\t use variants:         %s\n", use_variants?"on":"off");
     }
+    fprintf(stdout, "\t max list length:      %i\n", max_list_length);
     fprintf(stdout, "\t pair usage:           %s\n", use_pair_info?"on":"off");
     if (use_pair_info) {
         fprintf(stdout, "\t max frag size size:   %i\n", max_gen_frag_size);
 //        fprintf(stdout, "\t insert size std dev:  %.2f\n", insert_dev);
     }
     fprintf(stdout, "\t print best only:      %s\n", print_best_only?"on":"off");
+    fprintf(stdout, "\t iterations:           %i\n", iterations);
+    fprintf(stdout, "\t threads:              %i\n", num_threads);
     if (use_mip_variance || ! use_mip_objective) {
         fprintf(stdout, "\t window size:          %i\n", window_size);
-        fprintf(stdout, "\t iterations:           %i\n", iterations);
     } else {
         fprintf(stdout, "\t use mip objective:    %s\n", use_mip_objective?"on":"off");
         fprintf(stdout, "\t segment file:         %s\n", segmentfile.c_str()); 
@@ -165,7 +170,8 @@ void Config::init() {
     max_gen_frag_size = 1000000;
 //    insert_dev = 0.4;
     num_threads = 1;
-    max_fifo_size = 1000;
+    max_fifo_size = 5000;
+    max_list_length = 100;
     use_variants = false;
     use_mip_variance = false;
     segmentfile = string();

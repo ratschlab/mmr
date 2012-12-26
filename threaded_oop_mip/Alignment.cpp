@@ -182,8 +182,8 @@ void Alignment::fill_coverage_vectors(vector<unsigned long> &cov_keep, vector<un
 
 void Alignment::update_coverage_map(bool positive) {
 
-    pthread_mutex_lock(&mutex_coverage);
     //fprintf(stdout, "update coverage map on chr %i\n", this->chr);
+    //pthread_mutex_lock(&mutex_coverage);
     vector<unsigned int>::iterator idx = genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].begin() + this->start;
     unsigned long pos = this->start;
 
@@ -191,7 +191,9 @@ void Alignment::update_coverage_map(bool positive) {
         switch (this->operations.at(i)) {
             case 'M': case 'D': for (int j = 0; j < this->sizes.at(i); j++) {
                                     if (idx < genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].end()) {
+                                        pthread_mutex_lock(&mutex_coverage);
                                         *idx += (*idx > 0 || positive) ? (2*positive - 1) : 0; 
+                                        pthread_mutex_unlock(&mutex_coverage);
                                         idx++;
                                         pos++;
                                     }
@@ -215,7 +217,7 @@ void Alignment::update_coverage_map(bool positive) {
             break;
     }
 
-    pthread_mutex_unlock(&mutex_coverage);
+    //pthread_mutex_unlock(&mutex_coverage);
 }
 
 unsigned long Alignment::get_end() {

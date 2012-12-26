@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <pthread.h>
+#include <time.h>
 
 #include <unordered_map>
 #include <map>
@@ -29,14 +30,14 @@ GeneralData* genData = new GeneralData::GeneralData();
 Config* conf;
 bool done;
 
-pthread_mutex_t mutex_coverage;
-pthread_mutex_t mutex_fifo;
-pthread_mutex_t mutex_done;
-pthread_mutex_t mutex_best_left;
-pthread_mutex_t mutex_best_right;
-pthread_mutex_t mutex_counter;
+pthread_mutex_t mutex_coverage = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_fifo = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_done = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_best_left = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_best_right = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_counter = PTHREAD_MUTEX_INITIALIZER;
 
-pthread_cond_t fifo_is_full;
+pthread_cond_t fifo_is_full = PTHREAD_COND_INITIALIZER;
 pthread_attr_t attr;
 
 queue<OnlineData*> fifo;
@@ -416,8 +417,11 @@ int main(int argc, char *argv[]) {
             genData->num_altered = 0;
 
             string last_id = string("");
+            clock_t start_clock = clock();
+            clock_t start_time = time(NULL);
+
             // fill FIFO
-            while ((ret = data->parse_file(infile, last_line, genData, counter)) || data->left_reads.size() > 0 || data->right_reads.size() > 0) {
+            while ((ret = data->parse_file(infile, last_line, genData, counter, start_clock, start_time)) || data->left_reads.size() > 0 || data->right_reads.size() > 0) {
                 
                 // check if we use the first pass only to fill coverager map and infer zero predicted segments
                 if (iteration > 0 || !conf->zero_unpred) {
@@ -443,7 +447,8 @@ int main(int argc, char *argv[]) {
             pthread_mutex_unlock(&mutex_done);
             // join threads, if neccessary
             if (conf->num_threads > 1) {
-                fprintf(stdout, "waiting for threads to join\n");
+                if (conf->verbose)
+                    fprintf(stdout, "waiting for threads to join\n");
                 for (tid = 0; tid < conf->num_threads - 1; tid++) {
                    pthread_join(threads[tid], NULL); 
                 }
