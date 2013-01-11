@@ -13,7 +13,7 @@ fi
 chrms="$2"
 coding="$3"
 
-work_dir="/fml/ag-raetsch/nobackup2/projects/mmr/human_simulation/annotation"
+work_dir="/cbio/grlab/nobackup2/projects/mmr/human_simulation/annotation"
 
 if [ ! -z "$chrms" ]
 then

@@ -47,7 +47,7 @@ then
 fi
 
 mmr="$HOME/git/software/RNAgeeq/mm_resolve/threaded_oop_mip/mmr"
-samtools=/fml/ag-raetsch/share/software/samtools/samtools
+samtools=/cbio/grlab/share/software/samtools/samtools
 
 filename="${genes}_genes_${size}_reads/hg19_${chrms}subsample_${genes}_genes.gtf.${noise}fastq.gz.mapped.${stage}"
 target=${filename}.mmr${filter}

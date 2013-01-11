@@ -38,6 +38,6 @@ workdir=`pwd`
 
 export PYTHONPATH=$HOME/git/tools/python:$PYTHONPATH
 filebase=${genes}_genes_${readnum}_reads/hg19_${chrms}subsample_${genes}_genes.gtf
-gio_file=/fml/ag-raetsch/nobackup/projects/rgasp/genomes/hg19_14/hg19.gio/genome.config
+gio_file=/cbio/grlab/nobackup/projects/rgasp/genomes/hg19_14/hg19.gio/genome.config
 
 python $sample -s -F -q ${workdir}/error_model/quality.sample $noise -G $gio_file -m ${workdir}/error_model/mismatch.pickle -o ${filebase}${noisetag}.optimal -f ${filebase}.fasta -b ${filebase}.bed | gzip -c -6 > "${filebase}${noisetag}".fastq.gz

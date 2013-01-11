@@ -46,13 +46,13 @@ then
 fi
 
 ### set paths
-export PATH=/fml/ag-raetsch/share/software/bowtie-0.12.7:$PATH
-export PATH=/fml/ag-raetsch/share/software/bowtie2-2.0.2:$PATH
-export PATH=/fml/ag-raetsch/share/software/samtools:$PATH
+export PATH=/cbio/grlab/share/software/bowtie-0.12.7:$PATH
+export PATH=/cbio/grlab/share/software/bowtie2-2.0.2:$PATH
+export PATH=/cbio/grlab/share/software/samtools:$PATH
 
 # align reads
 outdir=${genes}_genes_${size}_reads/tophat/hg19_${chrms}subsample_${genes}_genes.gtf.${noise}fastq.gz
-anno=/fml/ag-raetsch/nobackup/projects/rgasp/annotations/human/hg19/encode_data.rel2b.liftover.all.gtf
+anno=/cbio/grlab/nobackup/projects/rgasp/annotations/human/hg19/encode_data.rel2b.liftover.all.gtf
 
 ### parameters
 mismatches=6
@@ -62,6 +62,6 @@ threads=8
 max_hits=50
 
 mkdir -p $outdir
-tophat2=/fml/ag-raetsch/share/software/tophat-2.0.5/bin/tophat2
+tophat2=/cbio/grlab/share/software/tophat-2.0.5/bin/tophat2
 
-$tophat2 /fml/ag-raetsch/nobackup/projects/rgasp/genomes/hg19_14/hg19.fa $fastq_left $fastq_right --output-dir $outdir --read-mismatches $mismatches --read-edit-dist $edit --read-gap-length $gaps --max-intron-length 50000 --max-multhits $max_hits --num-threads $threads --GTF $anno --report-secondary-alignments 2> $outdir/run_tophat.log
+$tophat2 /cbio/grlab/nobackup/projects/rgasp/genomes/hg19_14/hg19.fa $fastq_left $fastq_right --output-dir $outdir --read-mismatches $mismatches --read-edit-dist $edit --read-gap-length $gaps --max-intron-length 50000 --max-multhits $max_hits --num-threads $threads --GTF $anno --report-secondary-alignments 2> $outdir/run_tophat.log

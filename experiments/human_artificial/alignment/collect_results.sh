@@ -28,7 +28,7 @@ then
     chrms="`echo $chrms | tr ',' '_'`_"
 fi
 
-samtools=/fml/ag-raetsch/share/software/samtools/samtools
+samtools=/cbio/grlab/share/software/samtools/samtools
 work_dir=${genes}_genes_${size}_reads
 
 $samtools merge -n ${work_dir}/hg19_${chrms}subsample_${genes}_genes.gtf.${noise}fastq.gz.mapped.${stage} ${work_dir}/hg19_${chrms}subsample_${genes}_genes.gtf.${noise}fastq.gz.splits/split_1m.*.gz.mapped.${stage} 
