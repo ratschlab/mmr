@@ -6,7 +6,6 @@ readnum = '3000000';
 gene_num = '5000';
 
 noise_levels = {'', 'noise0.01', 'noise0.02', 'noise0.03'};
-%noise_levels = {'noise0.03'};
 experiments = {'unfiltered', 'best', 'mmr0'};
 
 experiment = [gene_num '_genes_' readnum '_reads'];
