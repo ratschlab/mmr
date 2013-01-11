@@ -28,8 +28,16 @@ then
     chrms="`echo $chrms | tr ',' '_'`_"
 fi
 
-samtools=/fml/ag-raetsch/share/software/samtools/samtools
 work_dir=${genes}_genes_${size}_reads
+target=${work_dir}/hg19_${chrms}subsample_${genes}_genes.gtf.${noise}fastq.gz.mapped.${stage}
 
-$samtools merge -n ${work_dir}/hg19_${chrms}subsample_${genes}_genes.gtf.${noise}fastq.gz.mapped.${stage} ${work_dir}/hg19_${chrms}subsample_${genes}_genes.gtf.${noise}fastq.gz.splits/split_1m.*.gz.mapped.${stage} 
+[[ ! -f $target ]] && samtools merge -n $target ${work_dir}/hg19_${chrms}subsample_${genes}_genes.gtf.${noise}fastq.gz.splits/split_1m.*.gz.mapped.${stage} 
+
+[[ ! -f ${target}.sorted.bam ]] && samtools sort $target ${target}.sorted
+
+[[ ! -f ${target}.sorted.bam.bai ]] && samtools index ${target}.sorted.bam
+
+[[ ! -f ${target}.best.sorted.bam ]] && samtools view -h ${target}.sorted.bam | grep -e "^@" -e "HI:i:0" | samtools view -bS -o ${target}.best.sorted.bam - 
+
+[[ ! -f ${target}.best.sorted.bam.bai ]] && samtools index ${target}.best.sorted.bam
 

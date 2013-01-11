@@ -1,4 +1,4 @@
-GEN_DIR    /fml/ag-raetsch/share/databases/genomes/H_sapiens/hg19
+GEN_DIR    /cbio/grlab/share/databases/genomes/H_sapiens/hg19
 EXPRESSION_X0   9500
 EXPRESSION_K    -0.6
 TSS_MEAN    50

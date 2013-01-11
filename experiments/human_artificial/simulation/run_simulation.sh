@@ -22,10 +22,10 @@ fi
 shift
 chrms="$1"
 
-#flux=/fml/ag-raetsch/share/software/flux-simulator-1.1/bin/flux-simulator
-flux=/fml/ag-raetsch/share/software/flux-simulator-1.1.1-20121103021450/bin/flux-simulator
+#flux=/cbio/grlab/share/software/flux-simulator-1.1/bin/flux-simulator
+flux=/cbio/grlab/share/software/FluxSimulator/flux-simulator-1.1.1-20121103021450/bin/flux-simulator
 
-workdir="/fml/ag-raetsch/nobackup2/projects/mmr/human_simulation"
+workdir="/cbio/grlab/nobackup2/projects/mmr/human_simulation"
 if [ ! -z "$chrms" ]
 then
     gtf=$workdir/annotation/hg19_`echo $chrms | tr ',' '_'`_subsample_${genes}_genes.gtf
@@ -38,8 +38,8 @@ mkdir -p $outdir
 
 cp flux_parameter_stub $flux_par_file
 
-MOL_NUM=$((8*$size))
-READ_NUM=$((2*$size))
+MOL_NUM=$((4*$size))
+READ_NUM=$size
 echo "NB_MOLECULES    $MOL_NUM" >> $flux_par_file
 echo "READ_NUMBER   $READ_NUM" >> $flux_par_file
 echo "REF_FILE_NAME $gtf" >> $flux_par_file
@@ -59,7 +59,8 @@ $flux --log DEBUG --force -p $flux_par_file &> ${workdir}/log_flux/flux_sim_${ge
 
 cat ${outdir}/${gtf_base}.bed | grep -v -e polyA > ${outdir}/${gtf_base}.noPolyA.bed
 
-bedToBam=/fml/ag-raetsch/share/software/BEDTools-Version-2.16.2/bin/bedToBam
+#bedToBam=/cbio/grlab/share/software/BEDTools/BEDTools-Version-2.16.2/bin/bedToBam
+bedToBam=/cbio/grlab/share/software/BEDTools/BEDTools-Version-GIT/bin/bedToBam
 genome=${workdir}/annotation/hg19.genome
 
 $bedToBam -bed12 -i ${outdir}/${gtf_base}.bed -g $genome > ${outdir}/${gtf_base}.bam

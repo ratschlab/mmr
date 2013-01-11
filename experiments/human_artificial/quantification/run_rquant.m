@@ -5,21 +5,22 @@ function run_rquant(experiment, noise)
     addpath('~/git/tools/genomes');
     addpath('~/git/software/rQuant/src');
 
-    exp_size ='15000000';
+    exp_size ='3000000';
     genenum = '5000';
     %chrms = 'chr2_chr3_chr4_';
     chrms = '';
-    stage = 3;
+    stage = 4;
 
     if nargin < 1,
         %experiments = {'mmr0', 'mmr1', 'unfiltered', 'best'};
         %experiments = {'mmr0', 'unfiltered', 'best'};
-        experiments = {'unfiltered', 'best'};
+        experiments = {'mmr0', 'unfiltered', 'best'};
     else
         experiments = {experiment};
     end;
     if nargin < 2,
-        noise_levels = {'noise0.01', 'noise0.02', 'noise0.03', ''};
+        %noise_levels = {'noise0.01', 'noise0.02', 'noise0.03', ''};
+        noise_levels = {'noise0.03', 'noise0.02', 'noise0.01', ''};
     else
         noise_levels = {noise};
     end;
@@ -41,16 +42,16 @@ function run_rquant(experiment, noise)
             end;
             CFG.exp = {{sprintf('hg19_%ssubsample_%s_genes.gtf.%sfastq.gz.mapped.%i.%ssorted', chrms, genenum, n_tag, stage, f_tag)}};
 
-            PAR.CFG.read_len = 75;
+            PAR.CFG.read_len = 76;
             PAR.CFG.VERBOSE = 1;
 
 
             %%%%% tracks, repeats, genes, genome info %%%%% 
-            CFG.base_dir = ['/fml/ag-raetsch/nobackup2/projects/mmr/human_simulation/' genenum '_genes_' exp_size '_reads'];
+            CFG.base_dir = ['/cbio/grlab/nobackup2/projects/mmr/human_simulation/' genenum '_genes_' exp_size '_reads'];
             CFG.out_dir = [CFG.base_dir '/rquant'];
             PAR.CFG.repeats_fn = '';
             PAR.CFG.correct_intervals = 0;
-            PAR.anno_dir = ['/fml/ag-raetsch/nobackup2/projects/mmr/human_simulation/' genenum '_genes_' exp_size '_reads'];
+            PAR.anno_dir = ['/cbio/grlab/nobackup2/projects/mmr/human_simulation/' genenum '_genes_' exp_size '_reads'];
             PAR.track = '';
 
             %%%%% output files %%%%%
@@ -116,8 +117,9 @@ function run_rquant(experiment, noise)
                 if ~exist(PAR.output_dir ,'dir'),
                     [s m mid] = mkdir(PAR.output_dir);
                     assert(s);
-                else
-                    fprintf(1, '%s already exists - skipping!', PAR.output_dir);
+                end;
+                if exist(strrep(PAR.output_file, '.gff3', '.par'), 'file'),
+                    fprintf(1, '%s already exists - skipping!\n', strrep(PAR.output_file, '.gff3', '.par'));
                     continue;
                 end
                 PAR.profiles_fn = sprintf('%s/profiles.mat', PAR.output_dir);

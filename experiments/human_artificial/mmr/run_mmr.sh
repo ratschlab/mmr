@@ -31,7 +31,6 @@ then
 fi
 if [ ! -z "$noise" ]
 then
-    echo $noise
     noise="noise${noise}."
 fi
 
@@ -46,16 +45,16 @@ then
     chrms=`echo $chrms | tr ',' '_'`_
 fi
 
-mmr="$HOME/git/software/RNAgeeq/mm_resolve/threaded_oop_mip/mmr"
-samtools=/fml/ag-raetsch/share/software/samtools/samtools
+mmr="$HOME/git/software/RNAgeeq/mm_resolve/threaded_oop_mip/mmr_test"
 
 filename="${genes}_genes_${size}_reads/hg19_${chrms}subsample_${genes}_genes.gtf.${noise}fastq.gz.mapped.${stage}"
 target=${filename}.mmr${filter}
 if [ ! -f "$target" ]
 then
-    time $mmr -w 20 -t $threads -p -b -T $samtools -f -F $filter -v -I 5 -o $target $filename > ${target}.log
-    $samtools sort $target ${target}.sorted
-    $samtools index ${target}.sorted.bam
+    time $mmr -w 20 -t $threads -p -b -L 50000 -T samtools -F $filter -v -I 5 -o $target $filename &> ${target}.log
+    #time $mmr -w 25 -t $threads -p -b -L 50000 -T samtools -F $filter -v -I 5 -o $target $filename &> ${target}.log
+    samtools sort $target ${target}.sorted
+    samtools index ${target}.sorted.bam
 else
     echo "$target already exists"
 fi
