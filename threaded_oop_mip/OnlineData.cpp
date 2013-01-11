@@ -39,14 +39,6 @@ void OnlineData::process_data_online(GeneralData* genData) {
     double loss = 0.0;
     bool found_pairs = false;
 
-    // if the number of left_reads or right_reads is longer than
-    // the maximum allowed nober of mappings per reads, ignore the
-    // the read - the first alignment will be the best
-    if (this->left_reads.size() > conf->max_list_length || this->right_reads.size() > conf->max_list_length) {
-        delete this;
-        return;
-    }
-
     if (conf->pre_filter) {
         ignore_idx_left = filter_alignments(this->left_reads);
         pthread_mutex_lock(&mutex_best_left);
@@ -82,6 +74,16 @@ void OnlineData::process_data_online(GeneralData* genData) {
         }
         pthread_mutex_unlock(&mutex_best_right);
     }
+
+    // if the number of left_reads or right_reads (after filtering) is longer than
+    // the maximum allowed number of mappings per reads, ignore 
+    // the read - the first alignment will be the best
+    // TODO Take alignment with best quality !!!
+    if (this->left_reads.size() > conf->max_list_length || this->right_reads.size() > conf->max_list_length) {
+        delete this;
+        return;
+    }
+
 
     get_active_reads(this->last_id, ignore_idx_left, ignore_idx_right, active_left_reads, active_right_reads, genData, found_pairs);
 

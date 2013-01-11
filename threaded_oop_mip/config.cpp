@@ -38,7 +38,7 @@ Config::Config(int argc, char *argv[]) {
 //        } else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--insert-dev")) {
 //            insert_dev = (double) atof(argv[++i]);
         } else if (!strcmp(argv[i], "-f") || !strcmp(argv[i], "--pre-filter")) {
-            pre_filter = true;
+            pre_filter = false;
         } else if (!strcmp(argv[i], "-P") || !strcmp(argv[i], "--parse-complete")) {
             parse_complete = true;
         } else if (!strcmp(argv[i], "-F") || !strcmp(argv[i], "--filter-dist")) {
@@ -47,10 +47,12 @@ Config::Config(int argc, char *argv[]) {
             window_size = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--threads")) {
             num_threads = atoi(argv[++i]);
-        } else if (!strcmp(argv[i], "-L") || !strcmp(argv[i], "--max_list_length")) {
+        } else if (!strcmp(argv[i], "-L") || !strcmp(argv[i], "--max-list-length")) {
             max_list_length = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-I") || !strcmp(argv[i], "--iterations")) {
             iterations = atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "--debug")) {
+            debug = true;
         } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
             print_usage(std::string(argv[0]));
             exit(0);
@@ -92,10 +94,11 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-S --strand-specific \talignments are strand specific [off]\n");
     // Filter options
     fprintf(stderr, "\n\tInput file filtering:\n");
-    fprintf(stderr, "\t-f --pre-filter \tpre filter all alignments that have F more edit ops than the best [on]\n");
+    fprintf(stderr, "\t-f --pre-filter \tswitch off pre filter for alignments that have F more edit ops than the best [on]\n");
     fprintf(stderr, "\t-F --filter-dist [INT]\tfilter distance F for pre-filter [1]\n");
     fprintf(stderr, "\t-V --use-variants \tuse variant alignments for filtering (different edit op count,\n");
     fprintf(stderr, "\t\t\t\trequires XG and XM Tag in alignment files) [off]\n");
+    fprintf(stderr, "\t-L --max-list-length [INT]\tmax length of alignment list per read (after filtering) [1000]\n");
     // Paired Alignment options
     fprintf(stderr, "\n\tPaired alignment handling:\n");
     fprintf(stderr, "\t-p --pair-usage \tpre use pair information in the reads [off]\n");
@@ -163,6 +166,7 @@ void Config::init() {
     parse_complete = false;
     use_mip_objective = false;
     strand_specific = false;
+    debug = false;
     window_size = 20;
     iterations = 5;
     filter_distance = 1;
@@ -171,7 +175,7 @@ void Config::init() {
 //    insert_dev = 0.4;
     num_threads = 1;
     max_fifo_size = 5000;
-    max_list_length = 100;
+    max_list_length = 1000;
     use_variants = false;
     use_mip_variance = false;
     segmentfile = string();

@@ -63,22 +63,26 @@ double intron_penalty(vector<unsigned int> &intron_coverage) {
     return sum;
 }
 
-double get_variance(vector<unsigned long> &exon_coverage) {
+double get_variance(vector<vector<unsigned long> > &exon_coverage) {
 
-    if (exon_coverage.size() < 2) {
-        return 0.0;
-    } else {
-        double sum = 0.0;
-        for ( vector<unsigned long>::iterator it = exon_coverage.begin(); it != exon_coverage.end(); it++) {
-            sum += (double) *it;
+    double total_var = 0.0;
+    for (size_t i = 0; i < exon_coverage.size(); i++) {
+        if (exon_coverage.size() < 2) {
+            continue;
+        } else {
+            double sum = 0.0;
+            for ( vector<unsigned long>::iterator it = exon_coverage.at(i).begin(); it != exon_coverage.at(i).end(); it++) {
+                sum += (double) *it;
+            }
+            double mean = sum / (double) exon_coverage.at(i).size();
+            sum = 0.0;
+            for ( vector<unsigned long>::iterator it = exon_coverage.at(i).begin(); it != exon_coverage.at(i).end(); it++) {
+                sum += pow((double) *it - mean, 2.0);
+            }
+            total_var += (sum / ((double) exon_coverage.at(i).size() - 1.0));  
         }
-        double mean = sum / (double) exon_coverage.size();
-        sum = 0.0;
-        for ( vector<unsigned long>::iterator it = exon_coverage.begin(); it != exon_coverage.end(); it++) {
-            sum += pow((double) *it - mean, 2.0);
-        }
-        return (sum / ((double) exon_coverage.size() - 1.0));  
     }
+    return total_var;
 }
 
 vector<unsigned int> alter_coverage(vector<unsigned int> &source, unsigned int window_left, unsigned int window_right, bool is_positive) {
@@ -150,6 +154,10 @@ void parse_header(char* sl) {
             }
         }
         else if (idx == 2) {
+            if (genData->chr_size_cum.size() == 0)
+                genData->chr_size_cum.push_back(0);
+            else
+                genData->chr_size_cum.push_back(genData->chr_size_cum.back() + genData->chr_size.back());
             tmp_sl = tmp_sl.substr(3, tmp_sl.size());
             genData->chr_size.push_back(atoi(tmp_sl.c_str()));    
             vector<unsigned int> tmp_cov(genData->chr_size.back(), 0);
@@ -225,8 +233,8 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
     if (! conf->use_mip_objective || ! used_mip) {
 
         // initialize segment coverage
-        vector<unsigned long> cov_keep;
-        vector<unsigned long> cov_change;
+        vector<vector<unsigned long> > cov_keep;
+        vector<vector<unsigned long> > cov_change;
 
         // init vectors of candidate and best alignments
         vector<pair<vector<Alignment>::iterator, bool> > aligns;
@@ -261,16 +269,32 @@ bool compare_align_iter_start(const pair<vector<Alignment>::iterator, bool> &lef
     return left.first->start < right.first->start;
 }
 
-void compute_coverage_loss(vector<pair<vector<Alignment>::iterator,bool> > aligns, vector<unsigned long> &cov_keep, vector<unsigned long> &cov_change) {
+void compute_coverage_loss(vector<pair<vector<Alignment>::iterator,bool> > aligns, vector<vector<unsigned long> > &cov_keep, vector<vector<unsigned long> > &cov_change) {
 
     // sort alignments by starting position
     sort(aligns.begin(), aligns.end(), compare_align_iter_start); 
 
-    unsigned long first_start = max(0ul, aligns.at(0).first->start - conf->window_size);
+//    unsigned long first_start = (conf->window_size <= aligns.at(0).first->start)?aligns.at(0).first->start - conf->window_size:0ul;
 
-    // iterate over alignments and fill coverage maps
+    // determine genomic position set of all alignments (including windows)
+    //set<unsigned long> genome_pos = aligns.at(0).first->get_genome_pos(conf->window_size);
+    vector<set<unsigned long> > genome_pos;
     for (size_t i = 0; i < aligns.size(); i++) {
-        aligns.at(i).first->fill_coverage_vectors(cov_keep, cov_change, first_start, aligns.at(i).second);
+        genome_pos.push_back(aligns.at(i).first->get_genome_pos(conf->window_size));
+    }
+
+    // fill coverage maps
+    for (size_t i = 0; i < aligns.size(); i++) {
+        vector<unsigned long> tmp;
+        cov_keep.push_back(tmp);
+        aligns.at(i).first->fill_coverage_vector(cov_keep.at(i));
+    }
+
+    cov_change = cov_keep;
+
+    // iterate over alignments and alter coverage maps
+    for (size_t i = 0; i < aligns.size(); i++) {
+        aligns.at(i).first->alter_coverage_vector(cov_change, genome_pos, aligns.at(i).second);
     }
 }
 
@@ -281,6 +305,8 @@ bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::it
     double best_loss = 0.0;
 
     pair<double, double> loss_candidate, loss_best;
+
+    debug=false;//true;
 
     // check how objective is to be computed
     // we need segments overlapping at least one of the two candidates
@@ -326,8 +352,8 @@ bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::it
     if (! conf->use_mip_objective || ! used_mip) {
 
         // initialize segment coverage
-        vector<unsigned long> cov_keep;
-        vector<unsigned long> cov_change;
+        vector<vector<unsigned long> > cov_keep;
+        vector<vector<unsigned long> > cov_change;
 
         // init vectors of candidate and best alignments
         vector<pair<vector<Alignment>::iterator, bool> > aligns;
@@ -339,6 +365,14 @@ bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::it
         
         best_loss = get_variance(cov_keep);
         candidate_loss = get_variance(cov_change);
+        if (debug) {
+            fprintf(stdout, "candidate (single):\n");
+            candidate->print();
+            fprintf(stdout, "best (single):\n");
+            best->print();
+            fprintf(stdout, "cov_keep (single):\n");
+            fprintf(stdout, "cand loss: %f best loss: %f\n\n", candidate_loss, best_loss);
+        }
     }
 
     if (conf->use_mip_objective && ! used_mip) {
@@ -346,7 +380,6 @@ bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::it
     } else {
         loss = min(candidate_loss, best_loss);
     }
-//    fprintf(stderr, "single cand loss: %f  single best loss: %f\n", candidate_loss, best_loss);
     return (candidate_loss < best_loss);
 }
 
@@ -358,6 +391,7 @@ set<vector<Alignment>::iterator> filter_alignments(vector<Alignment> &aligns) {
     if (aligns.size() == 0)
         return to_erase;
     unsigned int min_ops = aligns.begin()->edit_ops;
+
     for (v_idx = aligns.begin() + 1; v_idx < aligns.end(); v_idx++)
         min_ops = v_idx->edit_ops < min_ops?v_idx->edit_ops:min_ops;
 
@@ -611,9 +645,6 @@ bool pair_is_valid(vector<Alignment>::iterator align1, vector<Alignment>::iterat
     if (frag_size >= conf->max_gen_frag_size)
         return false;
 
-    //if (align1->is_spliced || align2->is_spliced) {
-   // }
-            
     return true;
 }
 
