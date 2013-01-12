@@ -1,10 +1,10 @@
-function genes = add_multimap_info(filename, bam_name_stub)
+function genes = add_multimap_info_tophat(filename, bam_name_stub)
 
     addpath '~/git/tools/ngs';
 
     load(filename);
 
-    bam_mm = [bam_name_stub, '.multimappers.bam'];
+    bam_mm = [bam_name_stub, '.ID_sorted.bam.multimappers.sorted.bam'];
     bam_unf = [bam_name_stub, '.bam'];
 
     for i = 1:length(genes),

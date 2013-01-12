@@ -33,7 +33,7 @@ then
     chrms=`echo $chrms | tr ',' '_'`_
 fi
 
-cufflinks=/cbio/grlab/share/software/cufflinks-1.3.0.Linux_x86_64/cufflinks
+cufflinks=/cbio/grlab/share/software/cufflinks/cufflinks-1.3.0.Linux_x86_64/cufflinks
 
 work_dir=${genes}_genes_${readnum}_reads
 out_dir=${work_dir}/tophat/hg19_${chrms}subsample_${genes}_genes.gtf.${noise}fastq.gz/cufflinks/${which_set}${noise_out}

@@ -1,9 +1,11 @@
 
-readnum = '15000000';
+%%% import corralation function mycorr
+addpath ~/git/projects/2011/rquant/evaluation/
+
+readnum = '3000000';
 gene_num = '5000';
 
-%noise_levels = {'noise0.01', 'noise0.02', 'noise0.03', ''};
-noise_levels = {''};
+noise_levels = {'', 'noise0.01', 'noise0.02', 'noise0.03'};
 experiments = {'unfiltered', 'best', 'mmr0'};
 
 experiment = [gene_num '_genes_' readnum '_reads'];
@@ -41,7 +43,8 @@ for n_idx = 1:length(noise_levels),
         %%% load art data into genes
         load(sprintf('%s/genes.mat', experiment));
         if ~isfield(genes, 'expr_orig'),
-            error(sprintf('Gene structure %s/genes.mat lacks expression information\n', experiment));
+            genes = add_orig_expression(sprintf('%s/genes.mat', experiment), sprintf('%s_genes_%s_reads/hg19_%ssubsample_%s_genes.gtf.pro', gene_num, readnum, chrms, gene_num));
+            %error(sprintf('Gene structure %s/genes.mat lacks expression information\n', experiment));
         end;
         if ~isfield(genes, 'multi_frac_tophat'),
             genes = add_multimap_info_tophat(sprintf('%s/genes.mat', experiment), sprintf('%s/tophat/hg19_subsample_%s_genes.gtf.fastq.gz/accepted_hits', experiment, gene_num));
@@ -67,12 +70,15 @@ for n_idx = 1:length(noise_levels),
         if strcmp(f_tag, '.unfiltered')
             f_tag = '';
         end;
-        n_tag = [noise '.'];
+        n_tag = ['.' noise];
         if strcmp(n_tag, '.'),
             n_tag = '';
         end;
-        pred = importdata(sprintf('%s/tophat/hg19_%ssubsample_%s_genes.gtf.%sfastq.gz/cufflinks/%s/transcripts.counts', experiment, chrms, gene_num, n_tag, which_set));
-        pred.textdata = pred.textdata(2:end, :); %% textdata -> 1 genes, 2 transcripts; data -> 1 FPKM, 2 cov
+        %pred = importdata(sprintf('%s/tophat/hg19_%ssubsample_%s_genes.gtf.%sfastq.gz/cufflinks/%s/transcripts.counts', experiment, chrms, gene_num, n_tag, which_set));
+        %pred.textdata = pred.textdata(2:end, :); %% textdata -> 1 genes, 2 transcripts; data -> 1 FPKM, 2 cov
+        [a b c d] = textread(sprintf('%s/tophat/hg19_%ssubsample_%s_genes.gtf%s.fastq.gz/cufflinks/%s%s/transcripts.counts', experiment, chrms, gene_num, n_tag, which_set, n_tag), '%s%s%f%f', "headerlines", 1);
+        pred.textdata = [a b];
+        pred.data = [c d];
 
         %%% remove NaNs
         s_idx = find(isnan(pred.data(:, 1)));
@@ -92,16 +98,17 @@ for n_idx = 1:length(noise_levels),
         pred.textdata = pred.textdata(s2, :);
         pred.data = pred.data(s2, :);
 
-        %%% TODO Cufflinks uses rpkms
-        [r_p p_p] = corr(art.expr, pred.data(:, 1) .* art.lengths ./ 1000, 'type', 'Pearson');
-        [r_s p_s] = corr(art.expr, pred.data(:, 1) .* art.lengths ./ 1000, 'type', 'Spearman');
+        %[r_p p_p] = corr(art.expr, pred.data(:, 1) .* art.lengths ./ 1000, 'type', 'Pearson');
+        r_p = mycorr(art.expr, pred.data(:, 1) .* art.lengths, 'Pearson');
+        %[r_s p_s] = corr(art.expr, pred.data(:, 1) .* art.lengths ./ 1000, 'type', 'Spearman');
+        r_s = mycorr(art.expr, pred.data(:, 1) .* art.lengths, 'Spearman');
         pearson_cuff(n_idx, e_idx) = r_p;
         spearman_cuff(n_idx, e_idx) = r_s;
         %fprintf(1, 'Cufflinks (Pearson / Spearman):\n\ttranscripts: %i (%i)\n\tr: %f / %f\n\tp:%f / %f\n\n', size(art.data, 1), size(art_orig.data, 1), r_p, r_s, p_p, p_s);
         fprintf(1, 'Cufflinks (Pearson / Spearman):\n\ttranscripts: %i (%i)\n\tr: %f / %f\n\n', size(art.expr, 1), size([art_orig(:).transcripts]', 1), r_p, r_s);
 
         %for perc = [0.05 0.1 0.15 0.2 0.25],
-        for perc = [0.1 1.0],
+        for perc = [1.0],
 
             %%% extract all transcripts and their IDs from the gene structure
             art.IDs = [art_orig(:).transcripts]';
@@ -154,8 +161,10 @@ for n_idx = 1:length(noise_levels),
             %figure; plot(log10(art.data(:, 3)), log10(pred.data), 'o');
             %title(which_set);
 
-            [r_p p_p] = corr(art.expr, pred.expr, 'type', 'Pearson');
-            [r_s p_s] = corr(art.expr, pred.expr, 'type', 'Spearman');
+            %[r_p p_p] = corr(art.expr, pred.expr, 'type', 'Pearson');
+            %[r_s p_s] = corr(art.expr, pred.expr, 'type', 'Spearman');
+            r_p = mycorr(art.expr, pred.expr, 'Pearson');
+            r_s = mycorr(art.expr, pred.expr, 'Spearman');
             pearson_rquant(n_idx, e_idx) = r_p;
             spearman_rquant(n_idx, e_idx) = r_s;
             %fprintf(1, 'rQuant (Pearson / Spearman):\n\ttranscripts: %i (%i)\n\tr: %f / %f\n\tp:%f / %f\n\n', size(art.data, 1), size(art_orig.data, 1), r_p, r_s, p_p, p_s);
@@ -163,6 +172,35 @@ for n_idx = 1:length(noise_levels),
         end;
     end;
 end;
+
+clf;
+colormap('summer');
+
+subplot(1, 2, 1);
+bar(pearson_rquant);
+title('Per Transcript Correlation (Pearson) - rQuant');
+set(gca, 'XTick', 1:length(noise_levels));
+noise_labels = {'2.7', '3.7', '4.7', '5.7'};
+set(gca, 'XTickLabel', noise_labels(1:length(noise_levels)));
+xlabel('Error Rate');
+ylabel('Correlation (Pearson)');
+ylim([0.4 1.0]);
+legend(experiments, 'Location', 'NorthEast');
+
+subplot(1, 2, 2);
+bar(pearson_cuff);
+title('Per Transcript Correlation (Pearson) - Cufflinks');
+set(gca, 'XTick', 1:length(noise_levels));
+noise_labels = {'2.7', '3.7', '4.7', '5.7'};
+set(gca, 'XTickLabel', noise_labels(1:length(noise_levels)));
+xlabel('Error Rate');
+ylabel('Correlation (Pearson)');
+ylim([0.4 1.0]);
+legend(experiments, 'Location', 'NorthEast');
+
+print('-dpdf', sprintf('%s/transcript_correlation_pearson_TH.pdf', experiment));
+
+return
 
 clf;
 plot(pearson_rquant', '-o');

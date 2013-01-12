@@ -266,22 +266,28 @@ void BatchData::get_active_read_set() {
 double BatchData::get_total_min_loss() {
 
     double sum_min_loss = 0.0; 
-    set<unsigned long> empty;
-    pair<double, double> tmp_loss;
 
     for (unordered_map<string, vector<Alignment> >::iterator r_idx = this->read_map_left.begin(); r_idx != this->read_map_left.end(); r_idx++) {
         for (vector<Alignment>::iterator v_idx = r_idx->second.begin(); v_idx != r_idx->second.end(); v_idx++) {
             if (v_idx->is_best) {
-                tmp_loss = v_idx->get_variance_loss(empty, empty, empty, false);
-                sum_min_loss += tmp_loss.first;
+                vector<vector<unsigned long> > cov_keep;
+                vector<vector<unsigned long> > cov_change;
+                vector<pair<vector<Alignment>::iterator, bool> > aligns;
+                aligns.push_back( make_pair(v_idx, true) );
+                compute_coverage_loss(aligns, cov_keep, cov_change);
+                sum_min_loss += get_variance(cov_keep);
             }
         }
     }
     for (unordered_map<string, vector<Alignment> >::iterator r_idx = this->read_map_right.begin(); r_idx != this->read_map_right.end(); r_idx++) {
         for (vector<Alignment>::iterator v_idx = r_idx->second.begin(); v_idx != r_idx->second.end(); v_idx++) {
             if (v_idx->is_best) {
-                tmp_loss = v_idx->get_variance_loss(empty, empty, empty, false);
-                sum_min_loss += tmp_loss.first;
+                vector<vector<unsigned long>>  cov_keep;
+                vector<vector<unsigned long> > cov_change;
+                vector<pair<vector<Alignment>::iterator, bool> > aligns;
+                aligns.push_back( make_pair(v_idx, true) );
+                compute_coverage_loss(aligns, cov_keep, cov_change);
+                sum_min_loss += get_variance(cov_keep);
             }
         }
     }

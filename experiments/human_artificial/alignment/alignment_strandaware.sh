@@ -39,6 +39,8 @@ else
 	spliced_alignment=1
 fi
 
+SAMTOOLS=/cbio/grlab/share/software/bin
+
 #just the left side is considered for the ath alignments
 if [ -z "$4" ]
 then
@@ -56,13 +58,17 @@ then
 	echo detected as stranded \(right\)
 fi
 
-source ../../get_tmp_files.sh 
+#source ../../get_tmp_files.sh 
 
-export GENOME=/tmp/rgasp/genomes/hg19_14/hg19.fa #`cat genome.tmp` 
+#export GENOME=/tmp/rgasp/genomes/hg19_14/hg19.fa #`cat genome.tmp` 
+export GENOME=/cbio/grlab/nobackup/projects/rgasp/genomes/hg19_14/hg19.fa
+
 if [ $spliced_alignment == "1" ];
 then
-	export ACC=/tmp/rgasp/annotations/hg19/acc_pred.bspf #acc.pred.bspf 
-	export DON=/tmp/rgasp/annotations/hg19/don_pred.bspf #don.pred.bspf 
+	#export ACC=/tmp/rgasp/annotations/hg19/acc_pred.bspf #acc.pred.bspf 
+	#export DON=/tmp/rgasp/annotations/hg19/don_pred.bspf #don.pred.bspf 
+	export ACC=/cbio/grlab/nobackup/projects/rgasp/annotations/human_small/hg19/acc_pred.bspf #acc.pred.bspf 
+	export DON=/cbio/grlab/nobackup/projects/rgasp/annotations/human_small/hg19/don_pred.bspf #don.pred.bspf 
 fi
 
 umask 0007
@@ -81,13 +87,17 @@ then
             junctionsfile="../../anno.align.8.junctions"
             echo use junctionsfile: $junctionsfile
             export protocol="second"
-			export GMPAR=" -M 10 -G 2 -E 10 -l 10 -L 20 -K 12 -C 30 -I 200000 -NI 2 -SA 100 -CT 50 -a -S -seed-hit-cancel-threshold 1000 -report-map-read -report-spliced-read -report-map-region -report-splice-sites 0.95 -filter-max-mismatches 0 -filter-max-gaps 0 -filter-splice-region 5 -qpalma-use-map-max-len 2000 -f bamn -samtools /cbio/grlab/share/software/samtools/ -polytrim 40 -qpalma-prb-offset-fix -min-spliced-segment-len 8 -junction-remapping-coverage 2 -junction-remapping $junctionsfile -score-annotated-splice-sites $junctionsfile -acc $ACC/pred/contig_%i%c -don $DON/pred/contig_%i%c -report-splice-sites-top-perc 0.01 -QMM 7 -max-dp-deletions 3"
+			export GMPAR=" -M 10 -G 2 -E 10 -l 10 -L 20 -K 12 -C 30 -I 200000 -NI 2 -SA 100 -CT 50 -a -S -seed-hit-cancel-threshold 1000 -report-map-read -report-spliced-read -report-map-region -report-splice-sites 0.95 -filter-max-mismatches 0 -filter-max-gaps 0 -filter-splice-region 5 -qpalma-use-map-max-len 2000 -f bamn -samtools $SAMTOOLS -polytrim 40 -qpalma-prb-offset-fix -min-spliced-segment-len 8 -junction-remapping-coverage 2 -junction-remapping $junctionsfile -score-annotated-splice-sites $junctionsfile -acc $ACC/pred/contig_%i%c -don $DON/pred/contig_%i%c -report-splice-sites-top-perc 0.01 -QMM 7 -max-dp-deletions 3"
 			;;
 		3)
             junctionsfile="../../anno.align.8.junctions"
             echo use junctionsfile: $junctionsfile
             export protocol="second"
-			export GMPAR=" -M 6 -G 2 -E 6 -l 10 -L 20 -K 12 -C 30 -I 200000 -NI 2 -SA 100 -CT 50 -a -S -seed-hit-cancel-threshold 1000 -report-map-read -report-spliced-read -report-map-region -report-splice-sites 0.95 -filter-max-mismatches 0 -filter-max-gaps 0 -filter-splice-region 5 -qpalma-use-map-max-len 2000 -f bamn -samtools /cbio/grlab/share/software/samtools/ -polytrim 40 -qpalma-prb-offset-fix -min-spliced-segment-len 8 -junction-remapping-coverage 2 -junction-remapping $junctionsfile -score-annotated-splice-sites $junctionsfile -acc $ACC/pred/contig_%i%c -don $DON/pred/contig_%i%c -report-splice-sites-top-perc 0.01 -QMM 7 -max-dp-deletions 3"
+			export GMPAR=" -M 6 -G 2 -E 6 -l 10 -L 20 -K 12 -C 30 -I 200000 -NI 2 -SA 100 -CT 50 -a -S -seed-hit-cancel-threshold 1000 -report-map-read -report-spliced-read -report-map-region -report-splice-sites 0.95 -filter-max-mismatches 0 -filter-max-gaps 0 -filter-splice-region 5 -qpalma-use-map-max-len 2000 -f bamn -samtools $SAMTOOLS -polytrim 40 -qpalma-prb-offset-fix -min-spliced-segment-len 8 -junction-remapping-coverage 2 -junction-remapping $junctionsfile -score-annotated-splice-sites $junctionsfile -acc $ACC/pred/contig_%i%c -don $DON/pred/contig_%i%c -report-splice-sites-top-perc 0.01 -QMM 7 -max-dp-deletions 3"
+			;;
+		4)
+            export protocol="second"
+			export GMPAR=" -M 6 -G 2 -E 6 -l 10 -L 20 -K 12 -C 30 -I 200000 -NI 2 -SA 100 -CT 50 -a -S -seed-hit-cancel-threshold 1000 -report-map-read -report-spliced-read -report-map-region -report-splice-sites 0.95 -filter-max-mismatches 0 -filter-max-gaps 0 -filter-splice-region 5 -qpalma-use-map-max-len 2000 -f bamn -samtools $SAMTOOLS -polytrim 40 -qpalma-prb-offset-fix -min-spliced-segment-len 8 -acc $ACC/pred/contig_%i%c -don $DON/pred/contig_%i%c -report-splice-sites-top-perc 0.01 -QMM 7 -max-dp-deletions 3"
 			;;
 		
 	esac
@@ -129,22 +139,22 @@ if [ $spliced_alignment == "1" ];
 then
 	if [ $stranded == "1" ];
 	then
-		echo $palmapper_path/palmapper -i $GENOME -q ../../$2 -o ../../$2.mapped.$stage -stranded $strand -protocol $protocol -threads $NSLOTS -qpalma $QPALMAPAR $REPORT $REPORT_RO $GMPAR -index-precache -samtools /cbio/grlab/share/software/samtools/
+		echo $palmapper_path/palmapper -i $GENOME -q ../../$2 -o ../../$2.mapped.$stage -stranded $strand -protocol $protocol -threads $NSLOTS -qpalma $QPALMAPAR $REPORT $REPORT_RO $GMPAR -index-precache -samtools $SAMTOOLS
 		#valgrind --max-stackframe=4097344 
 		#gdb --args 
-		time $palmapper_path/palmapper -i $GENOME -q ../../$2 -o ../../$2.mapped.$stage -stranded $strand -protocol $protocol -threads $NSLOTS -qpalma $QPALMAPAR $REPORT $REPORT_RO $GMPAR  -index-precache -samtools /cbio/grlab/share/software/samtools/
+		time $palmapper_path/palmapper -i $GENOME -q ../../$2 -o ../../$2.mapped.$stage -stranded $strand -protocol $protocol -threads $NSLOTS -qpalma $QPALMAPAR $REPORT $REPORT_RO $GMPAR  -index-precache -samtools $SAMTOOLS
 	else 
-		echo $palmapper_path/palmapper -i $GENOME -q ../../$2 -o ../../$2.mapped.$stage -threads $NSLOTS -qpalma $QPALMAPAR $REPORT $REPORT_RO $GMPAR  -index-precache -samtools /cbio/grlab/share/software/samtools/
-		time $palmapper_path/palmapper -i $GENOME -q ../../$2 -o ../../$2.mapped.$stage -threads $NSLOTS -qpalma $QPALMAPAR $REPORT $REPORT_RO $GMPAR -index-precache -samtools /cbio/grlab/share/software/samtools/
+		echo $palmapper_path/palmapper -i $GENOME -q ../../$2 -o ../../$2.mapped.$stage -threads $NSLOTS -qpalma $QPALMAPAR $REPORT $REPORT_RO $GMPAR  -index-precache -samtools $SAMTOOLS
+		time $palmapper_path/palmapper -i $GENOME -q ../../$2 -o ../../$2.mapped.$stage -threads $NSLOTS -qpalma $QPALMAPAR $REPORT $REPORT_RO $GMPAR -index-precache -samtools $SAMTOOLS
 	fi 
 else
 	if [ $stranded == "1" ];
 	then
-		echo $palmapper_path/palmapper -i $GENOME -q ../../$2 -o ../../$2.mapped.$stage -threads $NSLOTS $REPORT $REPORT_RO $GMPAR -stranded $strand -protocol $protocol -index-precache -samtools /cbio/grlab/share/software/samtools/
-		time $palmapper_path/palmapper -i $GENOME -q ../../$2 -o ../../$2.mapped.$stage -threads $NSLOTS $REPORT $REPORT_RO $GMPAR -stranded $strand -protocol $protocol -index-precache -samtools /cbio/grlab/share/software/samtools/
+		echo $palmapper_path/palmapper -i $GENOME -q ../../$2 -o ../../$2.mapped.$stage -threads $NSLOTS $REPORT $REPORT_RO $GMPAR -stranded $strand -protocol $protocol -index-precache -samtools $SAMTOOLS
+		time $palmapper_path/palmapper -i $GENOME -q ../../$2 -o ../../$2.mapped.$stage -threads $NSLOTS $REPORT $REPORT_RO $GMPAR -stranded $strand -protocol $protocol -index-precache -samtools $SAMTOOLS
 	else
-		echo $palmapper_path/palmapper -i $GENOME -q ../../$2 -o ../../$2.mapped.$stage -threads $NSLOTS $REPORT $REPORT_RO $GMPAR -index-precache -samtools /cbio/grlab/share/software/samtools/
-		time $palmapper_path/palmapper -i $GENOME -q ../../$2 -o ../../$2.mapped.$stage -threads $NSLOTS $REPORT $REPORT_RO $GMPAR -index-precache -samtools /cbio/grlab/share/software/samtools/
+		echo $palmapper_path/palmapper -i $GENOME -q ../../$2 -o ../../$2.mapped.$stage -threads $NSLOTS $REPORT $REPORT_RO $GMPAR -index-precache -samtools $SAMTOOLS
+		time $palmapper_path/palmapper -i $GENOME -q ../../$2 -o ../../$2.mapped.$stage -threads $NSLOTS $REPORT $REPORT_RO $GMPAR -index-precache -samtools $SAMTOOLS
 	fi 
 fi
 

@@ -15,6 +15,7 @@ struct GeneralData {
     // general coverage structures
     map <string, unsigned char> chr_num;
     vector <unsigned int> chr_size;
+    vector <unsigned int> chr_size_cum;
     map <pair<unsigned char, unsigned char>, vector<unsigned int> > coverage_map; // contains coverage vector for each chr/strand pair
 
     // intron coverage map (will only be used for Mitie optimization)

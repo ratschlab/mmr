@@ -5,7 +5,7 @@ function run_rquant_tophat(experiment, noise)
     addpath('~/git/tools/genomes');
     addpath('~/git/software/rQuant/src');
 
-    exp_size ='15000000';
+    exp_size ='3000000';
     genenum = '5000';
     %chrms = 'chr2_chr3_chr4_';
     chrms = '';
@@ -19,7 +19,7 @@ function run_rquant_tophat(experiment, noise)
     end;
     if nargin < 2,
         %noise_levels = {'noise0.01', 'noise0.02', 'noise0.03', ''};
-        noise_levels = {''};
+        noise_levels = {'noise0.03', 'noise0.02', 'noise0.01', ''};
     else
         noise_levels = {noise};
     end;
@@ -46,11 +46,11 @@ function run_rquant_tophat(experiment, noise)
 
 
             %%%%% tracks, repeats, genes, genome info %%%%% 
-            CFG.base_dir = sprintf('/fml/ag-raetsch/nobackup2/projects/mmr/human_simulation/%s_genes_%s_reads/tophat/hg19_%ssubsample_%s_genes.gtf.%sfastq.gz', genenum, exp_size, chrms, genenum, n_tag);
+            CFG.base_dir = sprintf('/cbio/grlab/nobackup2/projects/mmr/human_simulation/%s_genes_%s_reads/tophat/hg19_%ssubsample_%s_genes.gtf.%sfastq.gz', genenum, exp_size, chrms, genenum, n_tag);
             CFG.out_dir = [CFG.base_dir '/rquant'];
             PAR.CFG.repeats_fn = '';
             PAR.CFG.correct_intervals = 0;
-            PAR.anno_dir = ['/fml/ag-raetsch/nobackup2/projects/mmr/human_simulation/' genenum '_genes_' exp_size '_reads/tophat'];
+            PAR.anno_dir = ['/cbio/grlab/nobackup2/projects/mmr/human_simulation/' genenum '_genes_' exp_size '_reads'];
             PAR.track = '';
 
             %%%%% output files %%%%%
@@ -115,6 +115,7 @@ function run_rquant_tophat(experiment, noise)
                 PAR.output_file = sprintf('%s/%s_rquant.gff3', PAR.output_dir, CFG.exp{e}{1});
                 if ~exist(PAR.output_dir ,'dir'),
                     [s m mid] = mkdir(PAR.output_dir);
+                    %s = system(sprintf('mkdir -p %s', PAR.output_dir));
                     assert(s);
                 else
                     fprintf(1, '%s already exists - skipping!\n', PAR.output_dir);

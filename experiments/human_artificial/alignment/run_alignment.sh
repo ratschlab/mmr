@@ -57,7 +57,7 @@ do
     if [ ! -f ${file}.done.$stage ]
     then
         echo submitting $file
-        echo time ./alignment_strandaware.sh ${fastq}.splits/ $file $stage $strand | qsub -o $file.log.$stage -j y -l h_vmem=18G -cwd -N hu.$stage -p 400 -pe parallel 2 >& $file.jobid.$stage
+        echo time ./alignment_strandaware.sh ${fastq}.splits/ $file $stage $strand | qsub -o $file.log.$stage -j y -l h_vmem=30G -cwd -N hu.$stage -pe make 2 >& $file.jobid.$stage
     fi
 done
 

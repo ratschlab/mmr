@@ -26,6 +26,7 @@ class Config {
         bool use_mip_variance;
         bool strand_specific;
         bool zero_unpred;
+        bool debug;
         
         unsigned int window_size;
         unsigned int iterations;
@@ -36,6 +37,7 @@ class Config {
         unsigned char filter_distance;
 
         int intron_offset;
+        int max_gen_frag_size;
 
         string infile;
         string outfile;
@@ -43,7 +45,6 @@ class Config {
         string lossfile;
         string samtools;
 
-        double insert_size;
         double insert_dev;
 
         int iteration;

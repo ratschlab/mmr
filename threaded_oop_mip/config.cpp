@@ -33,12 +33,12 @@ Config::Config(int argc, char *argv[]) {
             use_mip_variance = true;
         } else if (!strcmp(argv[i], "-r") || !strcmp(argv[i], "--read-len")) {
             read_len = (double) atoi(argv[++i]);
-//        } else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "--insert-size")) {
-//            insert_size = (double) atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "--max-fragment-size")) {
+            max_gen_frag_size = atoi(argv[++i]);
 //        } else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--insert-dev")) {
 //            insert_dev = (double) atof(argv[++i]);
         } else if (!strcmp(argv[i], "-f") || !strcmp(argv[i], "--pre-filter")) {
-            pre_filter = true;
+            pre_filter = false;
         } else if (!strcmp(argv[i], "-P") || !strcmp(argv[i], "--parse-complete")) {
             parse_complete = true;
         } else if (!strcmp(argv[i], "-F") || !strcmp(argv[i], "--filter-dist")) {
@@ -47,10 +47,12 @@ Config::Config(int argc, char *argv[]) {
             window_size = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--threads")) {
             num_threads = atoi(argv[++i]);
-        } else if (!strcmp(argv[i], "-L") || !strcmp(argv[i], "--max_list_length")) {
+        } else if (!strcmp(argv[i], "-L") || !strcmp(argv[i], "--max-list-length")) {
             max_list_length = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-I") || !strcmp(argv[i], "--iterations")) {
             iterations = atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "--debug")) {
+            debug = true;
         } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
             print_usage(std::string(argv[0]));
             exit(0);
@@ -92,15 +94,16 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-S --strand-specific \talignments are strand specific [off]\n");
     // Filter options
     fprintf(stderr, "\n\tInput file filtering:\n");
-    fprintf(stderr, "\t-f --pre-filter \tpre filter all alignments that have F more edit ops than the best [on]\n");
+    fprintf(stderr, "\t-f --pre-filter \tswitch off pre filter for alignments that have F more edit ops than the best [on]\n");
     fprintf(stderr, "\t-F --filter-dist [INT]\tfilter distance F for pre-filter [1]\n");
     fprintf(stderr, "\t-V --use-variants \tuse variant alignments for filtering (different edit op count,\n");
     fprintf(stderr, "\t\t\t\trequires XG and XM Tag in alignment files) [off]\n");
+    fprintf(stderr, "\t-L --max-list-length [INT]\tmax length of alignment list per read (after filtering) [1000]\n");
     // Paired Alignment options
     fprintf(stderr, "\n\tPaired alignment handling:\n");
     fprintf(stderr, "\t-p --pair-usage \tpre use pair information in the reads [off]\n");
 //    fprintf(stderr, "\t-d --insert-dev \tallowed deviation from insert size (times insert size) [0.4]\n");
-//    fprintf(stderr, "\t-i --insert-size \testimted insert size for paired end reads [200]\n");
+    fprintf(stderr, "\t-i --max-fragment-size \tupper limit of GENOMIC fragment length [1 000 000]\n");
     // Output Options
     fprintf(stderr, "\n\tOutput handling:\n");
     fprintf(stderr, "\t-b --best-only \t\tprint only best alignment [off]\n");
@@ -135,10 +138,10 @@ void Config::print_call(std::string prog_name) {
     }
     fprintf(stdout, "\t max list length:      %i\n", max_list_length);
     fprintf(stdout, "\t pair usage:           %s\n", use_pair_info?"on":"off");
-//    if (use_pair_info) {
-//        fprintf(stdout, "\t insert size:          %.2f\n", insert_size);
+    if (use_pair_info) {
+        fprintf(stdout, "\t max frag size size:   %i\n", max_gen_frag_size);
 //        fprintf(stdout, "\t insert size std dev:  %.2f\n", insert_dev);
-//    }
+    }
     fprintf(stdout, "\t print best only:      %s\n", print_best_only?"on":"off");
     fprintf(stdout, "\t iterations:           %i\n", iterations);
     fprintf(stdout, "\t threads:              %i\n", num_threads);
@@ -163,15 +166,16 @@ void Config::init() {
     parse_complete = false;
     use_mip_objective = false;
     strand_specific = false;
+    debug = false;
     window_size = 20;
     iterations = 5;
     filter_distance = 1;
     intron_offset = 5;
-//    insert_size = 200.0;
+    max_gen_frag_size = 1000000;
 //    insert_dev = 0.4;
     num_threads = 1;
     max_fifo_size = 5000;
-    max_list_length = 100;
+    max_list_length = 1000;
     use_variants = false;
     use_mip_variance = false;
     segmentfile = string();

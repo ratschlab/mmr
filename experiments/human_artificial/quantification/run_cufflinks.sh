@@ -3,7 +3,7 @@
 set -e
 
 usage() {
-    echo "usage: $0 <genes> <readnum> <experiment> [noise] [<chr1,[chr2,...]>]"
+    echo "usage: $0 <genes> <readnum> <experiment> <stage> [noise] [<chr1,[chr2,...]>]"
     exit 1
 }
 
@@ -17,6 +17,10 @@ shift
 
 [[ -z "$1" ]] && usage
 which_set="$1"
+shift
+
+[[ -z "$1" ]] && usage
+stage="$1"
 shift
 
 noise="$1"
@@ -33,10 +37,8 @@ then
     chrms=`echo $chrms | tr ',' '_'`_
 fi
 
-cufflinks=/cbio/grlab/share/software/cufflinks-1.3.0.Linux_x86_64/cufflinks
-
 work_dir=${genes}_genes_${readnum}_reads
-out_dir=${work_dir}/cufflinks/${which_set}${noise_out}
+out_dir=${work_dir}/cufflinks/${which_set}${noise_out}.stage${stage}
 
 gtf=`pwd`/annotation/hg19_${chrms}subsample_${genes}_genes.nochr.gtf
 
@@ -46,12 +48,12 @@ then
 else
     which_set=""
 fi
-alignment=`pwd`/${genes}_genes_${readnum}_reads/hg19_${chrms}subsample_${genes}_genes.gtf.${noise}fastq.gz.mapped.2.${which_set}sorted.bam
+alignment=`pwd`/${genes}_genes_${readnum}_reads/hg19_${chrms}subsample_${genes}_genes.gtf.${noise}fastq.gz.mapped.${stage}.${which_set}sorted.bam
 
 mkdir -p ${out_dir}
 if [ ! -f ${out_dir}/cufflinks.log ]
 then
-    $cufflinks -o ${out_dir} -G $gtf ${alignment} 2> ${out_dir}/cufflinks.log 
+    /cbio/grlab/share/software/cufflinks/cufflinks-1.3.0.Linux_x86_64/cufflinks -o ${out_dir} -G $gtf ${alignment} 2> ${out_dir}/cufflinks.log 
     python cuff_extract_counts.py ${out_dir}/transcripts.gtf > ${out_dir}/transcripts.counts
 else
     echo "${out_dir}/cufflinks.log exists - delete to re-run"

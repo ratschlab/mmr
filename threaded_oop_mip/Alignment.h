@@ -1,7 +1,6 @@
 #ifndef __ALIGNMENT_H__
 #define __ALIGNMENT_H__
 
-#include <cstring>
 #include <string>
 #include <vector>
 #include <set>
@@ -36,14 +35,17 @@ public:
 
     string fill(char* sl, unsigned char &pair);
 
-    //pair<double, double> get_variance_loss(set<unsigned long> overlap_region);
-    //pair<double, double> get_variance_loss(set<unsigned long> covered_pos, set<unsigned long> not_covered_pos);
-    pair<double, double> get_variance_loss(set<unsigned long> covered_pos, set<unsigned long> not_covered_pos, set<unsigned long> mate_covered_pos, bool mate_is_best);
+    void fill_coverage_vectors(vector<unsigned long> &cov_keep, vector<unsigned long> &cov_change, set<unsigned int> &genome_pos, unsigned long first_start, bool is_curr_best);
+
+    void fill_coverage_vector(vector<unsigned long> &cov_keep);
+
+    void alter_coverage_vector(vector<vector<unsigned long> > &cov_change, vector<set<unsigned long> > &genome_pos, bool is_curr_best);
 
     void update_coverage_map(bool positive);
+
     unsigned long get_end();
     
-    bool comparator(const Alignment &left, const Alignment &right); 
+    bool compare_edit_ops(const Alignment &left, const Alignment &right); 
 
     bool is_spliced();
 

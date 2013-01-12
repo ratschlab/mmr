@@ -23,7 +23,7 @@ void parse_cigar(string cigar, vector<char> &operations, vector<int> &sizes);
 
 double intron_penalty(vector<unsigned int> &intron_coverage);
 
-double get_variance(vector<unsigned int> &exon_coverage, vector<unsigned int> &intron_coverage);
+double get_variance(vector<vector<unsigned long> > &exon_coverage);
 
 vector<unsigned int> alter_coverage(vector<unsigned int> &source, unsigned int window_left, unsigned int window_right, bool is_positive);
 
@@ -44,5 +44,9 @@ double compute_mip_loss(double observed_cov, double predicted_cov, unsigned long
 void prepare_mip_objective();
 
 void add_zero_segments();
+
+void compute_coverage_loss(vector<pair<vector<Alignment>::iterator,bool> > aligns, vector<vector<unsigned long> > &cov_keep, vector<vector<unsigned long> > &cov_change);
+
+bool pair_is_valid(vector<Alignment>::iterator first, vector<Alignment>::iterator second);
 
 #endif
