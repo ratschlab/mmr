@@ -49,6 +49,7 @@ fi
 export PATH=/cbio/grlab/share/software/bowtie/bowtie-0.12.7:$PATH
 export PATH=/cbio/grlab/share/software/bowtie/bowtie2-2.0.2:$PATH
 export PATH=/cbio/grlab/share/software/bowtie/samtools:$PATH
+export LD_LIBRARY_PATH=/cbio/grlab/share/software/lib/:$LD_LIBRARY_PATH
 
 # align reads
 outdir=`pwd`/${genes}_genes_${size}_reads/tophat/hg19_${chrms}subsample_${genes}_genes.gtf.${noise}fastq.gz

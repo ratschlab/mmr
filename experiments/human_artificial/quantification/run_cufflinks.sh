@@ -50,6 +50,8 @@ else
 fi
 alignment=`pwd`/${genes}_genes_${readnum}_reads/hg19_${chrms}subsample_${genes}_genes.gtf.${noise}fastq.gz.mapped.${stage}.${which_set}sorted.bam
 
+export LD_LIBRARY_PATH=/cbio/grlab/share/software/lib/:$LD_LIBRARY_PATH
+
 mkdir -p ${out_dir}
 if [ ! -f ${out_dir}/cufflinks.log ]
 then

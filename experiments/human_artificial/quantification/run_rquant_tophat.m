@@ -1,4 +1,5 @@
-function run_rquant_tophat(experiment, noise)
+function run_rquant_tophat(readlen, experiment, noise)
+%function run_rquant_tophat(readlen, experiment, noise)
 
     addpath('~/git/tools/rproc');
     addpath('~/git/tools/utils_matlab');
@@ -10,14 +11,14 @@ function run_rquant_tophat(experiment, noise)
     %chrms = 'chr2_chr3_chr4_';
     chrms = '';
 
-    if nargin < 1,
+    if nargin < 2,
         %experiments = {'mmr0', 'mmr1', 'unfiltered', 'best'};
         experiments = {'mmr0', 'unfiltered', 'best'};
         %experiments = {'mmr0'};
     else
         experiments = {experiment};
     end;
-    if nargin < 2,
+    if nargin < 3,
         %noise_levels = {'noise0.01', 'noise0.02', 'noise0.03', ''};
         noise_levels = {'noise0.03', 'noise0.02', 'noise0.01', ''};
     else
@@ -41,16 +42,16 @@ function run_rquant_tophat(experiment, noise)
             end;
             CFG.exp = {{sprintf('accepted_hits%s', f_tag)}};
 
-            PAR.CFG.read_len = 76;
+            PAR.CFG.read_len = readlen;
             PAR.CFG.VERBOSE = 1;
 
 
             %%%%% tracks, repeats, genes, genome info %%%%% 
-            CFG.base_dir = sprintf('/cbio/grlab/nobackup2/projects/mmr/human_simulation/%s_genes_%s_reads/tophat/hg19_%ssubsample_%s_genes.gtf.%sfastq.gz', genenum, exp_size, chrms, genenum, n_tag);
+            CFG.base_dir = sprintf('/cbio/grlab/nobackup2/projects/mmr/human_simulation_%i/%s_genes_%s_reads/tophat/hg19_%ssubsample_%s_genes.gtf.%sfastq.gz', readlen, genenum, exp_size, chrms, genenum, n_tag);
             CFG.out_dir = [CFG.base_dir '/rquant'];
             PAR.CFG.repeats_fn = '';
             PAR.CFG.correct_intervals = 0;
-            PAR.anno_dir = ['/cbio/grlab/nobackup2/projects/mmr/human_simulation/' genenum '_genes_' exp_size '_reads'];
+            PAR.anno_dir = sprintf('/cbio/grlab/nobackup2/projects/mmr/human_simulation_%i/%s_genes_%s_reads', readlen, genenum, exp_size);
             PAR.track = '';
 
             %%%%% output files %%%%%
@@ -110,6 +111,10 @@ function run_rquant_tophat(experiment, noise)
                 d_tag = experiment;
                 if ~isempty(noise),
                     n_tag = ['.' noise];
+                end;
+                if ~exist(CFG.out_dir ,'dir'),
+                    [s m mid] = mkdir(CFG.out_dir);
+                    assert(s);
                 end;
                 PAR.output_dir = sprintf('%s/%s%s', CFG.out_dir, d_tag, n_tag);
                 PAR.output_file = sprintf('%s/%s_rquant.gff3', PAR.output_dir, CFG.exp{e}{1});

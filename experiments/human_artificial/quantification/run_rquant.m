@@ -1,4 +1,5 @@
-function run_rquant(experiment, noise)
+function run_rquant(readlen, experiment, noise)
+%function run_rquant(readlen, experiment, noise)
 
     addpath('~/git/tools/rproc');
     addpath('~/git/tools/utils_matlab');
@@ -11,14 +12,14 @@ function run_rquant(experiment, noise)
     chrms = '';
     stage = 4;
 
-    if nargin < 1,
+    if nargin < 2,
         %experiments = {'mmr0', 'mmr1', 'unfiltered', 'best'};
-        %experiments = {'mmr0', 'unfiltered', 'best'};
         experiments = {'mmr0', 'unfiltered', 'best'};
+        %experiments = {'mmr0', 'unfiltered', 'best'};
     else
         experiments = {experiment};
     end;
-    if nargin < 2,
+    if nargin < 3,
         %noise_levels = {'noise0.01', 'noise0.02', 'noise0.03', ''};
         noise_levels = {'noise0.03', 'noise0.02', 'noise0.01', ''};
     else
@@ -42,16 +43,16 @@ function run_rquant(experiment, noise)
             end;
             CFG.exp = {{sprintf('hg19_%ssubsample_%s_genes.gtf.%sfastq.gz.mapped.%i.%ssorted', chrms, genenum, n_tag, stage, f_tag)}};
 
-            PAR.CFG.read_len = 76;
+            PAR.CFG.read_len = readlen;
             PAR.CFG.VERBOSE = 1;
 
 
             %%%%% tracks, repeats, genes, genome info %%%%% 
-            CFG.base_dir = ['/cbio/grlab/nobackup2/projects/mmr/human_simulation/' genenum '_genes_' exp_size '_reads'];
+            CFG.base_dir = sprintf('/cbio/grlab/nobackup2/projects/mmr/human_simulation_%i/%s_genes_%s_reads', readlen, genenum, exp_size);
             CFG.out_dir = [CFG.base_dir '/rquant'];
             PAR.CFG.repeats_fn = '';
             PAR.CFG.correct_intervals = 0;
-            PAR.anno_dir = ['/cbio/grlab/nobackup2/projects/mmr/human_simulation/' genenum '_genes_' exp_size '_reads'];
+            PAR.anno_dir = sprintf('/cbio/grlab/nobackup2/projects/mmr/human_simulation_%i/%s_genes_%s_reads', readlen, genenum, exp_size);
             PAR.track = '';
 
             %%%%% output files %%%%%

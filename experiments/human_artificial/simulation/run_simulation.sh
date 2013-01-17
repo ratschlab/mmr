@@ -3,29 +3,28 @@
 
 set -e
 
-if [ -z "$1" ]
-then
-    echo "usage: $0 <genes> <readnum> [<chr1[,chr2,...]>]"
+usage() {
+    echo "usage: $0 <genes> <readnum> <readlen> [<chr1[,chr2,...]>]"
     exit
-else
-    genes="$1"
-fi
+}
+
+[[ -z "$1" ]] && usage
+genes="$1"
 shift
 
-if [ -z "$1" ]
-then
-    echo "usage: $0 <genes> <readnum> [<chr1[,chr2,...]>]"
-    exit
-else
-    size="$1"
-fi
+[[ -z "$1" ]] && usage
+size="$1"
 shift
+
+[[ -z "$1" ]] && usage
+readlen="$1"
+shift
+
 chrms="$1"
 
-#flux=/cbio/grlab/share/software/flux-simulator-1.1/bin/flux-simulator
 flux=/cbio/grlab/share/software/FluxSimulator/flux-simulator-1.1.1-20121103021450/bin/flux-simulator
 
-workdir="/cbio/grlab/nobackup2/projects/mmr/human_simulation"
+workdir="/cbio/grlab/nobackup2/projects/mmr/human_simulation_${readlen}"
 if [ ! -z "$chrms" ]
 then
     gtf=$workdir/annotation/hg19_`echo $chrms | tr ',' '_'`_subsample_${genes}_genes.gtf
@@ -42,6 +41,7 @@ MOL_NUM=$((4*$size))
 READ_NUM=$size
 echo "NB_MOLECULES    $MOL_NUM" >> $flux_par_file
 echo "READ_NUMBER   $READ_NUM" >> $flux_par_file
+echo "READ_LENGTH   $readlen" >> $flux_par_file
 echo "REF_FILE_NAME $gtf" >> $flux_par_file
 #if [ ! -f ${workdir}/76_error.model ]
 #then
@@ -55,11 +55,15 @@ echo "LIB_FILE_NAME ${outdir}/${gtf_base}.lib" >> $flux_par_file
 echo "PRO_FILE_NAME ${outdir}/${gtf_base}.pro" >> $flux_par_file
 echo "SEQ_FILE_NAME ${outdir}/${gtf_base}.bed" >> $flux_par_file
 
+export TMPDIR=${workdir}/tmp
+
+mkdir -p $TMPDIR
+mkdir -p ${workdir}/log_flux
+
 $flux --log DEBUG --force -p $flux_par_file &> ${workdir}/log_flux/flux_sim_${genes}_genes_${size}_reads.log
 
 cat ${outdir}/${gtf_base}.bed | grep -v -e polyA > ${outdir}/${gtf_base}.noPolyA.bed
 
-#bedToBam=/cbio/grlab/share/software/BEDTools/BEDTools-Version-2.16.2/bin/bedToBam
 bedToBam=/cbio/grlab/share/software/BEDTools/BEDTools-Version-GIT/bin/bedToBam
 genome=${workdir}/annotation/hg19.genome
 

@@ -178,62 +178,55 @@ colormap('summer');
 
 subplot(1, 2, 1);
 bar(pearson_rquant);
-title('Per Transcript Correlation (Pearson) - rQuant');
+title('rQuant');
 set(gca, 'XTick', 1:length(noise_levels));
-noise_labels = {'2.7', '3.7', '4.7', '5.7'};
+noise_labels = {'native', '+1%', '+2%', '+3%'};
 set(gca, 'XTickLabel', noise_labels(1:length(noise_levels)));
 xlabel('Error Rate');
-ylabel('Correlation (Pearson)');
-ylim([0.4 1.0]);
-legend(experiments, 'Location', 'NorthEast');
+ylabel('Transcript Correlation (Pearson)');
+ylim([0.0 1.0]);
+%legend(experiments, 'Location', 'SouthEast');
 
 subplot(1, 2, 2);
 bar(pearson_cuff);
-title('Per Transcript Correlation (Pearson) - Cufflinks');
+title('Cufflinks');
 set(gca, 'XTick', 1:length(noise_levels));
-noise_labels = {'2.7', '3.7', '4.7', '5.7'};
+noise_labels = {'native', '+1%', '+2%', '+3%'};
 set(gca, 'XTickLabel', noise_labels(1:length(noise_levels)));
 xlabel('Error Rate');
-ylabel('Correlation (Pearson)');
-ylim([0.4 1.0]);
+ylabel('Transcript Correlation (Spearman)');
+ylim([0.0 1.0]);
 legend(experiments, 'Location', 'NorthEast');
 
-print('-dpdf', sprintf('%s/transcript_correlation_pearson_TH.pdf', experiment));
+print('-dpdf', '-S1200,600', sprintf('%s/transcript_correlation_pearson_TH.pdf', experiment));
+
+figure;
+colormap('summer');
+
+subplot(1, 2, 1);
+bar(spearman_rquant);
+title('rQuant');
+set(gca, 'XTick', 1:length(noise_levels));
+noise_labels = {'native', '+1%', '+2%', '+3%'};
+set(gca, 'XTickLabel', noise_labels(1:length(noise_levels)));
+xlabel('Error Rate');
+ylabel('Transcript Correlation (Spearman)');
+ylim([0.0 1.0]);
+%legend(experiments, 'Location', 'SouthEast');
+
+subplot(1, 2, 2);
+bar(spearman_cuff);
+title('Cufflinks');
+set(gca, 'XTick', 1:length(noise_levels));
+noise_labels = {'native', '+1%', '+2%', '+3%'};
+set(gca, 'XTickLabel', noise_labels(1:length(noise_levels)));
+xlabel('Error Rate');
+ylabel('Transcript Correlation (Spearman)');
+ylim([0.0 1.0]);
+legend(experiments, 'Location', 'NorthEast');
+
+print('-dpdf', '-S1200,600', sprintf('%s/transcript_correlation_spearman_TH.pdf', experiment));
+
 
 return
 
-clf;
-plot(pearson_rquant', '-o');
-title('Per Transcript Correlation (Pearson) - rQuant');
-legend(labels_rquant, 'Location', 'NorthWest');
-set(gca, 'XTick', [1 2 3]);
-set(gca, 'XTickLabel', experiments);
-xlim([0 4]);
-print('-dpdf', sprintf('%s/transcript_correlation_rquant_pearson.pdf', experiment));
-
-clf;
-plot(pearson_cuff', '-o');
-title('Per Transcript Correlation (Pearson) - Cufflinks');
-legend(labels_cuff, 'Location', 'NorthWest');
-set(gca, 'XTick', [1 2 3]);
-set(gca, 'XTickLabel', experiments);
-xlim([0 4]);
-print('-dpdf', sprintf('%s/transcript_correlation_cufflinks_pearson.pdf', experiment));
-
-clf;
-plot(spearman_rquant', '-o');
-title('Per Transcript Correlation (Pearson) - rQuant');
-legend(labels_rquant, 'Location', 'NorthWest');
-set(gca, 'XTick', [1 2 3]);
-set(gca, 'XTickLabel', experiments);
-xlim([0 4]);
-print('-dpdf', sprintf('%s/transcript_correlation_rquant_spearman.pdf', experiment));
-
-clf;
-plot(spearman_cuff', '-o');
-title('Per Transcript Correlation (Spearman) - Cufflinks');
-legend(labels_cuff, 'Location', 'NorthWest');
-set(gca, 'XTick', [1 2 3]);
-set(gca, 'XTickLabel', experiments);
-xlim([0 4]);
-print('-dpdf', sprintf('%s/transcript_correlation_cufflinks_spearman.pdf', experiment));
