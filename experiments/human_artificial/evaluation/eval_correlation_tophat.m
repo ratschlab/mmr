@@ -194,7 +194,7 @@ set(gca, 'XTick', 1:length(noise_levels));
 noise_labels = {'native', '+1%', '+2%', '+3%'};
 set(gca, 'XTickLabel', noise_labels(1:length(noise_levels)));
 xlabel('Error Rate');
-ylabel('Transcript Correlation (Spearman)');
+ylabel('Transcript Correlation (Pearson)');
 ylim([0.0 1.0]);
 legend(experiments, 'Location', 'NorthEast');
 
@@ -211,7 +211,7 @@ noise_labels = {'native', '+1%', '+2%', '+3%'};
 set(gca, 'XTickLabel', noise_labels(1:length(noise_levels)));
 xlabel('Error Rate');
 ylabel('Transcript Correlation (Spearman)');
-ylim([0.0 1.0]);
+ylim([0.5 0.8]);
 %legend(experiments, 'Location', 'SouthEast');
 
 subplot(1, 2, 2);
@@ -222,7 +222,7 @@ noise_labels = {'native', '+1%', '+2%', '+3%'};
 set(gca, 'XTickLabel', noise_labels(1:length(noise_levels)));
 xlabel('Error Rate');
 ylabel('Transcript Correlation (Spearman)');
-ylim([0.0 1.0]);
+ylim([0.5 0.8]);
 legend(experiments, 'Location', 'NorthEast');
 
 print('-dpdf', '-S1200,600', sprintf('%s/transcript_correlation_spearman_TH.pdf', experiment));
