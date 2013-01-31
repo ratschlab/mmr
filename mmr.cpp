@@ -58,6 +58,8 @@ void write_output_direct() {
 
     int output_counter = 0;
 
+    bool unmapped = false;
+
     string id;
     string last_left_id = string("");
     string last_right_id = string("");
@@ -86,11 +88,17 @@ void write_output_direct() {
             continue;
         }
 
+        unmapped = false;
         sl = strtok(line, "\t");
-        id = curr_alignment->fill(sl, pair_info);
+        id = curr_alignment->fill(sl, pair_info, unmapped);
         delete curr_alignment;
         if (id.size() == 0) {
             continue ;
+        }
+        if (unmapped && !conf->print_best_only) {
+            fprintf(outfile, "%s\n", cp_line);
+            output_counter++;
+            continue;
         }
     
         if (pair_info == 0) {
@@ -134,7 +142,7 @@ void write_output_direct() {
         fprintf(stdout, "... done.\nPrinted %i lines.\n", output_counter);
 }
 
-void write_output(unordered_map <string, vector<Alignment> > &read_map_left, unordered_map <string, vector<Alignment> > &read_map_right, map<string, unsigned char> &chr_num) {
+void write_output(unordered_map <string, vector<Alignment> > &read_map_left, unordered_map <string, vector<Alignment> > &read_map_right, map<string, unsigned int> &chr_num) {
 
     FILE* outfile = open_bam_pipe_out(conf->outfile);
     FILE* infile = open_bam_pipe_in(conf->infile);
@@ -144,6 +152,7 @@ void write_output(unordered_map <string, vector<Alignment> > &read_map_left, uno
     char cp_line[1000];
 
     unsigned char pair_info = 0;
+    bool unmapped = false;
 
     int output_counter = 0;
 
@@ -172,10 +181,16 @@ void write_output(unordered_map <string, vector<Alignment> > &read_map_left, uno
         }
 
         char* sl = strtok(line, "\t");
+        unmapped = false;
         curr_alignment.clear();
-        id = curr_alignment.fill(sl, pair_info);
+        id = curr_alignment.fill(sl, pair_info, unmapped);
         if (id.size() == 0) {
             continue ;
+        }
+        if (unmapped && !conf->print_best_only) {
+            fprintf(outfile, "%s\n", cp_line);
+            output_counter++;
+            continue;
         }
     
         vector<Alignment>::iterator it;
@@ -390,7 +405,8 @@ int main(int argc, char *argv[]) {
                 char* sl = strtok(line, "\t");
                 bool header_parsed = false;
                 while (line[0] == '@') {
-                    parse_header(sl);
+                    if (line[1] == 'S' && line[2] == 'Q')
+                        parse_header(sl);
                     ret = fgets(line, sizeof(line), infile);
                     strcpy(last_line, line);
                     sl = strtok(line, "\t");
@@ -423,7 +439,7 @@ int main(int argc, char *argv[]) {
             // fill FIFO
             while ((ret = data->parse_file(infile, last_line, genData, counter, start_clock, start_time)) || data->left_reads.size() > 0 || data->right_reads.size() > 0) {
                 
-                // check if we use the first pass only to fill coverager map and infer zero predicted segments
+                // check if we use the first pass only to fill coverage map and infer zero predicted segments
                 if (iteration > 0 || !conf->zero_unpred) {
                     if (conf->num_threads < 2) {
                         data->process_data_online(genData);

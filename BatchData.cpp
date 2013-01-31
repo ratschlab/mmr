@@ -79,6 +79,7 @@ void BatchData::parse_file() {
 
     FILE* infile = open_bam_pipe_in(conf->infile);
     bool read_header = false;
+    bool unmapped = false;
 
     if (conf->verbose) {
         fprintf(stdout, "\nReading input file from: %s\n", conf->infile.c_str());
@@ -119,8 +120,12 @@ void BatchData::parse_file() {
             exit(1);
         }
         
+        unmapped = false;
         curr_alignment.clear();
-        id = curr_alignment.fill(sl, pair_info);
+        id = curr_alignment.fill(sl, pair_info, unmapped);
+
+        if (unmapped)
+            continue ;
 
         if (id.size() == 0) {
             if (strcmp(cp_line, "samtools subprocess for reading terminated successfully\n")) {

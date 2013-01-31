@@ -27,6 +27,7 @@ class Config {
         bool strand_specific;
         bool zero_unpred;
         bool debug;
+        bool take_non_secondary_only; 
         
         unsigned int window_size;
         unsigned int iterations;
@@ -35,6 +36,7 @@ class Config {
         unsigned int read_len;
         unsigned int max_list_length;
         unsigned char filter_distance;
+        unsigned char trim_id;
 
         int intron_offset;
         int max_gen_frag_size;

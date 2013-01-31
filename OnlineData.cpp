@@ -84,7 +84,6 @@ void OnlineData::process_data_online(GeneralData* genData) {
         return;
     }
 
-
     get_active_reads(this->last_id, ignore_idx_left, ignore_idx_right, active_left_reads, active_right_reads, genData, found_pairs);
 
     if (found_pairs) {
@@ -406,6 +405,7 @@ char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData
     char* ret = last_line;
 
     unsigned char pair_info = 0;
+    bool unmapped = false;
 
     Alignment curr_alignment;
     string id;
@@ -438,9 +438,13 @@ char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData
         }
 
         char* sl = strtok(line, "\t");
+        unmapped = false;
 
         curr_alignment.clear();
-        id = curr_alignment.fill(sl, pair_info);
+        id = curr_alignment.fill(sl, pair_info, unmapped);
+
+        if (unmapped)
+            continue ;
 
         if (id.size() == 0) {
             if (strcmp(cp_line, "samtools subprocess for reading terminated successfully\n")) {
@@ -457,14 +461,30 @@ char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData
             if (id.compare(this->last_id) == 0 || this->last_id.size() == 0) {
                 pthread_mutex_lock(&mutex_best_left);
                 b_idx = genData->best_left.find(id);
+                // id does not yet exist in best_left 
+                // check also if we are restricted to accept only non_secondary alignments
                 if (b_idx == genData->best_left.end()) {
-                    genData->best_left.insert(pair<string, size_t>(id, this->left_reads.size()));
-                    curr_alignment.is_best = true;
-                    curr_alignment.update_coverage_map(1);
+                    if (!(conf->take_non_secondary_only && curr_alignment.is_secondary)) {
+                        genData->best_left.insert(pair<string, size_t>(id, this->left_reads.size()));
+                        curr_alignment.is_best = true;
+                        curr_alignment.update_coverage_map(1);
+                    }
                 }
-                else if (b_idx->second == this->left_reads.size()) {
+                // id exists (from second iteration on)
+                else if (conf->iteration > 0 && b_idx->second == this->left_reads.size()) {
                     curr_alignment.is_best = true;
-                    // TODO unsicher
+                }
+                // we check if we are in the first iteration and the current alignment
+                // has a better score than our best one, thus we init the map with the best one
+                else if (conf->iteration == 0 && curr_alignment.quality > this->left_reads.at(b_idx->second).quality) {
+                    // check if we are restricted to accept only non_secondary alignments
+                    if (!(conf->take_non_secondary_only && curr_alignment.is_secondary)) {
+                        this->left_reads.at(b_idx->second).is_best = false;
+                        this->left_reads.at(b_idx->second).update_coverage_map(0);
+                        curr_alignment.is_best = true;
+                        curr_alignment.update_coverage_map(1);
+                        b_idx->second = this->left_reads.size();
+                    }
                 }
                 pthread_mutex_unlock(&mutex_best_left);
                 this->left_reads.push_back(curr_alignment);
@@ -477,14 +497,30 @@ char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData
             if ((! id.compare(this->last_id)) || this->last_id.size() == 0) {
                 pthread_mutex_lock(&mutex_best_right);
                 b_idx = genData->best_right.find(id);
+                // id does not yet exist in best_right
                 if (b_idx == genData->best_right.end()) {
-                    genData->best_right.insert(pair<string, size_t>(id, this->right_reads.size()));
-                    curr_alignment.is_best = true;
-                    curr_alignment.update_coverage_map(1);
+                    // check if we are restricted to accept only non_secondary alignments
+                    if (!(conf->take_non_secondary_only && curr_alignment.is_secondary )) {
+                        genData->best_right.insert(pair<string, size_t>(id, this->right_reads.size()));
+                        curr_alignment.is_best = true;
+                        curr_alignment.update_coverage_map(1);
+                    }
                 }
-                else if (b_idx->second == this->right_reads.size()) {
+                // id exists (from second iteration on)
+                else if (conf->iteration > 0 && b_idx->second == this->right_reads.size()) {
                     curr_alignment.is_best = true;
-                    // TODO unsicher
+                }
+                // we check if we are in the first iteration and the current alignment
+                // has a better score than our best one, this we init the map with the best one
+                else if (conf->iteration == 0 && curr_alignment.quality > this->right_reads.at(b_idx->second).quality) {
+                    // check if we are restricted to accept only non_secondary alignments
+                    if (!(conf->take_non_secondary_only && curr_alignment.is_secondary)) {
+                        this->right_reads.at(b_idx->second).is_best = false;
+                        this->right_reads.at(b_idx->second).update_coverage_map(0);
+                        curr_alignment.is_best = true;
+                        curr_alignment.update_coverage_map(1);
+                        b_idx->second = this->right_reads.size();
+                    }
                 }
                 pthread_mutex_unlock(&mutex_best_right);
                 this->right_reads.push_back(curr_alignment);

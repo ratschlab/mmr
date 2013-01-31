@@ -23,6 +23,8 @@ Config::Config(int argc, char *argv[]) {
             print_best_only = true;
         } else if (!strcmp(argv[i], "-V") || !strcmp(argv[i], "--use_variants")) {
             use_variants = true;
+        } else if (!strcmp(argv[i], "-C") || !strcmp(argv[i], "--init-secondary")) {
+            take_non_secondary_only = false;
         } else if (!strcmp(argv[i], "-p") || !strcmp(argv[i], "--pair-usage")) {
             use_pair_info = true;
         } else if (!strcmp(argv[i], "-S") || !strcmp(argv[i], "--strand-specific")) {
@@ -31,8 +33,6 @@ Config::Config(int argc, char *argv[]) {
             use_mip_objective = true;
         } else if (!strcmp(argv[i], "-M") || !strcmp(argv[i], "--mip-variance")) {
             use_mip_variance = true;
-        } else if (!strcmp(argv[i], "-r") || !strcmp(argv[i], "--read-len")) {
-            read_len = (double) atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "--max-fragment-size")) {
             max_gen_frag_size = atoi(argv[++i]);
 //        } else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--insert-dev")) {
@@ -43,6 +43,8 @@ Config::Config(int argc, char *argv[]) {
             parse_complete = true;
         } else if (!strcmp(argv[i], "-F") || !strcmp(argv[i], "--filter-dist")) {
             filter_distance = (unsigned char) atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "-r") || !strcmp(argv[i], "--trim-id")) {
+            trim_id = (unsigned char) atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-w") || !strcmp(argv[i], "--windowsize")) {
             window_size = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--threads")) {
@@ -92,6 +94,7 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-P --parse-complete \tparse complete file into memory [off]\n");
     fprintf(stderr, "\t-t --threads \t\tnumber of threads to use (must be > 2) [1]\n");
     fprintf(stderr, "\t-S --strand-specific \talignments are strand specific [off]\n");
+    fprintf(stderr, "\t-C --init-secondary  \tchoose initial alignment also from secondary lines (flag 256) [off]\n");
     // Filter options
     fprintf(stderr, "\n\tInput file filtering:\n");
     fprintf(stderr, "\t-f --pre-filter \tswitch off pre filter for alignments that have F more edit ops than the best [on]\n");
@@ -132,6 +135,7 @@ void Config::print_call(std::string prog_name) {
     fprintf(stdout, "\t output file:          %s\n", outfile.c_str()); 
     fprintf(stdout, "\t strand specific:      %s\n", strand_specific?"yes":"no");
     fprintf(stdout, "\t pre filter:           %s\n", pre_filter?"on":"off");
+    fprintf(stdout, "\t init on secondary:    %s\n", take_non_secondary_only?"off":"on");
     if (pre_filter) {
         fprintf(stdout, "\t filter dist:          %i\n", filter_distance);
         fprintf(stdout, "\t use variants:         %s\n", use_variants?"on":"off");
@@ -142,6 +146,7 @@ void Config::print_call(std::string prog_name) {
         fprintf(stdout, "\t max frag size size:   %i\n", max_gen_frag_size);
 //        fprintf(stdout, "\t insert size std dev:  %.2f\n", insert_dev);
     }
+    fprintf(stdout, "\t trim read id by:      %i\n", trim_id);
     fprintf(stdout, "\t print best only:      %s\n", print_best_only?"on":"off");
     fprintf(stdout, "\t iterations:           %i\n", iterations);
     fprintf(stdout, "\t threads:              %i\n", num_threads);
@@ -170,6 +175,7 @@ void Config::init() {
     window_size = 20;
     iterations = 5;
     filter_distance = 1;
+    trim_id = 0;
     intron_offset = 5;
     max_gen_frag_size = 1000000;
 //    insert_dev = 0.4;
@@ -183,6 +189,7 @@ void Config::init() {
     read_len = 75;
     zero_unpred = false;
     samtools = "samtools";
+    take_non_secondary_only = true;
 
     iteration = 0;
     last_loss = 0.0;

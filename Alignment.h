@@ -11,7 +11,7 @@ using namespace std;
 class Alignment {
 
 public:
-    unsigned char chr;
+    unsigned int chr;
     unsigned long start;
     vector<char> operations;
     vector<int> sizes;
@@ -20,20 +20,21 @@ public:
     unsigned char quality;
     unsigned char strand;
     bool reversed;
+    bool is_secondary;
     set<unsigned int> deletions;
     map<unsigned int, int> insertions;
 
-    Alignment(const unsigned char a, const unsigned long b, const vector<char> c, const vector<int> cc, const bool d, const unsigned char e, const unsigned char f, const unsigned char g, const bool h, const set<unsigned char> deletions, const map<unsigned int, int> insertions) :
-        chr(a), start(b), operations(c), sizes(cc), is_best(d), edit_ops(e) , quality(f), strand(g), reversed(h) {}
+    Alignment(const unsigned int a, const unsigned long b, const vector<char> c, const vector<int> cc, const bool d, const unsigned char e, const unsigned char f, const unsigned char g, const bool h, const bool i, const set<unsigned char> deletions, const map<unsigned int, int> insertions) :
+        chr(a), start(b), operations(c), sizes(cc), is_best(d), edit_ops(e) , quality(f), strand(g), reversed(h), is_secondary(i) {}
 
     Alignment() :
-        chr(0), start(0), is_best(false), edit_ops(0), quality(0), strand('+'), reversed(false) {}
+        chr(0), start(0), is_best(false), edit_ops(0), quality(0), strand('+'), reversed(false), is_secondary(false) {}
 
     ~Alignment() {};
 
     bool operator==(const Alignment &other);
 
-    string fill(char* sl, unsigned char &pair);
+    string fill(char* sl, unsigned char &pair, bool &unmapped);
 
     void fill_coverage_vectors(vector<unsigned long> &cov_keep, vector<unsigned long> &cov_change, set<unsigned int> &genome_pos, unsigned long first_start, bool is_curr_best);
 

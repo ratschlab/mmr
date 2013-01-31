@@ -17,7 +17,7 @@ bool Alignment::operator==(const Alignment &other) {
     return (chr == other.chr && start == other.start && operations == other.operations && sizes == other.sizes && reversed == other.reversed);
 }
 
-string Alignment::fill(char* sl, unsigned char &pair) {
+string Alignment::fill(char* sl, unsigned char &pair, bool &unmapped) {
 
     int idx = 0;
     string id;
@@ -25,10 +25,16 @@ string Alignment::fill(char* sl, unsigned char &pair) {
     while (sl != NULL) {
         if (idx == 0) { 
             id = sl;
+            if (conf->trim_id > 0)
+                id = id.substr(0, id.size() - 2);
         } else if (idx == 1) {
             pair = (atoi(sl) & 128);
             this->reversed = ((atoi(sl) & 16) == 16);
+            this->is_secondary = ((atoi(sl) & 256) == 256);
         } else if (idx == 2) {
+            unmapped = (sl[0] == '*');
+            if (unmapped)
+                break;
             if (genData->chr_num.find(sl) == genData->chr_num.end()) {
                 fprintf(stderr, "ERROR: Contig name not in header!\n Contig: %s\n\n", sl);
                 exit(-1);
@@ -495,6 +501,7 @@ void Alignment::clear() {
     this->edit_ops = 0;
     this->quality = 0;
     this->reversed = false;
+    this->is_secondary = false;
     this->strand = '+';
 }
 

@@ -147,7 +147,7 @@ void parse_header(char* sl) {
             tmp_sl = tmp_sl.substr(3, tmp_sl.size());
             chr_name = tmp_sl ;
             if (genData->chr_num.find(tmp_sl) == genData->chr_num.end()) {
-                genData->chr_num.insert( pair<string, int>(tmp_sl,  genData->chr_num.size() + 1) );
+                genData->chr_num.insert( pair<string, unsigned int>(tmp_sl,  (unsigned int) genData->chr_num.size() + 1) );
             }
             else {
                 fprintf(stderr, "WARNING: Doubled contig names in header!\n Ignoring %s\n\n", tmp_sl.c_str());
@@ -163,11 +163,11 @@ void parse_header(char* sl) {
             vector<unsigned int> tmp_cov(genData->chr_size.back(), 0);
             if (conf->verbose) 
                 fprintf(stdout, "\t...reserving memory for contig %s (+) of size %i\n", chr_name.c_str(), genData->chr_size.back());
-            genData->coverage_map.insert( pair<pair<unsigned char, unsigned char>, vector<unsigned int> >(pair<unsigned char, unsigned char>(genData->chr_num[chr_name], '+'), tmp_cov) ); 
+            genData->coverage_map.insert( pair<pair<unsigned int, unsigned char>, vector<unsigned int> >(pair<unsigned int, unsigned char>(genData->chr_num[chr_name], '+'), tmp_cov) ); 
             if (conf->strand_specific) {
                 if (conf->verbose) 
                     fprintf(stdout, "\t...reserving memory for contig %s (-) of size %i\n", chr_name.c_str(), genData->chr_size.back());
-                genData->coverage_map.insert( pair<pair<unsigned char, unsigned char>, vector<unsigned int> >(pair<unsigned char, unsigned char>(genData->chr_num[chr_name], '-'), tmp_cov) ); 
+                genData->coverage_map.insert( pair<pair<unsigned int, unsigned char>, vector<unsigned int> >(pair<unsigned int, unsigned char>(genData->chr_num[chr_name], '-'), tmp_cov) ); 
             }
         }   
         idx ++;
@@ -509,7 +509,7 @@ void add_zero_segments() {
     if (conf->verbose)
         fprintf(stdout, "Adding additional exonic segments for covered but not predicted regions ...\n");
 
-    for (map <pair<unsigned char, unsigned char>, vector<unsigned int> >::iterator it = genData->coverage_map.begin(); it != genData->coverage_map.end(); it++) {
+    for (map <pair<unsigned int, unsigned char>, vector<unsigned int> >::iterator it = genData->coverage_map.begin(); it != genData->coverage_map.end(); it++) {
         if (conf->verbose)
             fprintf(stdout, "   ... processing chr %i / %c\n", it->first.first, it->first.second);
         // get boolean vector of covered positions
@@ -578,7 +578,7 @@ void add_zero_segments() {
         fprintf(stdout, "Adding additional intronic segments for covered but not predicted regions ...\n");
 
     // iterate over introns found in the alignment file
-    for (map <pair<unsigned char, unsigned char>, map< pair<unsigned long, unsigned long>, unsigned int> >::iterator curr_chr = genData->intron_coverage_map.begin(); curr_chr != genData->intron_coverage_map.end(); curr_chr++) {
+    for (map <pair<unsigned int, unsigned char>, map< pair<unsigned long, unsigned long>, unsigned int> >::iterator curr_chr = genData->intron_coverage_map.begin(); curr_chr != genData->intron_coverage_map.end(); curr_chr++) {
         if (conf->verbose)
             fprintf(stdout, "   ... processing chr %i / %c\n", curr_chr->first.first, curr_chr->first.second);
 
