@@ -334,9 +334,14 @@ void OnlineData::get_active_reads(string read_id, set<vector<Alignment>::iterato
                     active_left_reads.push_back(lv_idx);
                     active_right_reads.push_back(rv_idx);
                     found_pairs = true;
+                    if (active_left_reads.size() > conf->max_pair_list_length) {
+                        found_pairs = false;
+                        break;
+                    }
                 }
             }
         }
+        //fprintf(stdout, "pairs %i; left: %i; right: %i\n", active_left_reads.size(), left_reads.size(), right_reads.size());
 
         // no active pair is best alignment
         if (! best_pair && found_pairs) {
@@ -369,27 +374,16 @@ void OnlineData::get_active_reads(string read_id, set<vector<Alignment>::iterato
             genData->best_right[read_id] = (active_right_reads.front() - this->right_reads.begin());
             pthread_mutex_unlock(&mutex_best_right);
         }
-        // did not find valid pairs
-        if (! found_pairs) {
-            active_left_reads.clear();
-            for (vector<Alignment>::iterator lv_idx = this->left_reads.begin(); lv_idx != this->left_reads.end(); lv_idx++) {
-                if (conf->pre_filter && (ignore_reads_left.find(lv_idx) != ignore_reads_left.end()))
-                    continue;
-                active_left_reads.push_back(lv_idx);
-            }
-            active_right_reads.clear();
-            for (vector<Alignment>::iterator rv_idx = this->right_reads.begin(); rv_idx != this->right_reads.end(); rv_idx++) {
-                if (conf->pre_filter && (ignore_reads_right.find(rv_idx) != ignore_reads_right.end()))
-                    continue;
-                active_right_reads.push_back(rv_idx);
-            }
-        }
-    } else {
+    }
+    // did not find valid pairs
+    if (! found_pairs) {
+        active_left_reads.clear();
         for (vector<Alignment>::iterator lv_idx = this->left_reads.begin(); lv_idx != this->left_reads.end(); lv_idx++) {
             if (conf->pre_filter && (ignore_reads_left.find(lv_idx) != ignore_reads_left.end()))
                 continue;
             active_left_reads.push_back(lv_idx);
         }
+        active_right_reads.clear();
         for (vector<Alignment>::iterator rv_idx = this->right_reads.begin(); rv_idx != this->right_reads.end(); rv_idx++) {
             if (conf->pre_filter && (ignore_reads_right.find(rv_idx) != ignore_reads_right.end()))
                 continue;
@@ -397,7 +391,7 @@ void OnlineData::get_active_reads(string read_id, set<vector<Alignment>::iterato
         }
     }
 }
-
+    
 char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData, unsigned int &counter, clock_t &start_clock, clock_t &start_time) {
 
     char line[1000] ;

@@ -51,6 +51,8 @@ Config::Config(int argc, char *argv[]) {
             num_threads = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-L") || !strcmp(argv[i], "--max-list-length")) {
             max_list_length = atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "-A") || !strcmp(argv[i], "--max-pair-list-length")) {
+            max_pair_list_length = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-I") || !strcmp(argv[i], "--iterations")) {
             iterations = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "--debug")) {
@@ -107,6 +109,7 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-p --pair-usage \tpre use pair information in the reads [off]\n");
 //    fprintf(stderr, "\t-d --insert-dev \tallowed deviation from insert size (times insert size) [0.4]\n");
     fprintf(stderr, "\t-i --max-fragment-size \tupper limit of GENOMIC fragment length [1 000 000]\n");
+    fprintf(stderr, "\t-A --max-pair-list-length [INT]\tmax no of valid pairs before not using pair modus [10000]\n");
     // Output Options
     fprintf(stderr, "\n\tOutput handling:\n");
     fprintf(stderr, "\t-b --best-only \t\tprint only best alignment [off]\n");
@@ -144,6 +147,7 @@ void Config::print_call(std::string prog_name) {
     fprintf(stdout, "\t pair usage:           %s\n", use_pair_info?"on":"off");
     if (use_pair_info) {
         fprintf(stdout, "\t max frag size size:   %i\n", max_gen_frag_size);
+        fprintf(stdout, "\t max pair list length: %i\n", max_pair_list_length);
 //        fprintf(stdout, "\t insert size std dev:  %.2f\n", insert_dev);
     }
     fprintf(stdout, "\t trim read id by:      %i\n", trim_id);
@@ -182,6 +186,7 @@ void Config::init() {
     num_threads = 1;
     max_fifo_size = 5000;
     max_list_length = 1000;
+    max_pair_list_length = 10000;
     use_variants = false;
     use_mip_variance = false;
     segmentfile = string();

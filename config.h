@@ -35,6 +35,7 @@ class Config {
         unsigned int max_fifo_size;
         unsigned int read_len;
         unsigned int max_list_length;
+        unsigned int max_pair_list_length;
         unsigned char filter_distance;
         unsigned char trim_id;
 
