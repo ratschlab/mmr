@@ -148,8 +148,8 @@ void write_output(unordered_map <string, vector<Alignment> > &read_map_left, uno
     FILE* infile = open_bam_pipe_in(conf->infile);
 
     char* ret;
-    char line[1000];
-    char cp_line[1000];
+    char line[10000];
+    char cp_line[10000];
 
     unsigned char pair_info = 0;
     bool unmapped = false;
@@ -379,8 +379,8 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            char line[1000];
-            char last_line[1000];
+            char line[10000];
+            char last_line[10000];
 
             FILE* infile = open_bam_pipe_in(conf->infile);
 
@@ -388,7 +388,7 @@ int main(int argc, char *argv[]) {
                 fprintf(stderr, "Could not open %s for reading!\n", conf->infile.c_str());
                 exit(1);
             }
-            char* ret = fgets(line, 1000, infile);
+            char* ret = fgets(line, 10000, infile);
             unsigned int counter = 0;
 
             if (!ret) {

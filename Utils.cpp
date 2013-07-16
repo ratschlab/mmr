@@ -101,7 +101,7 @@ vector<unsigned int> alter_coverage(vector<unsigned int> &source, unsigned int w
 
 string update_line_flag(char* line, bool is_best) {
 
-    char cp_line[1000];
+    char cp_line[10000];
     strcpy(cp_line, line);
 
     char* sl = strtok(line, "\t");
@@ -411,7 +411,7 @@ void get_plifs_from_file() {
 		exit(2);
 	}
     char* ret;
-    char line[1000];
+    char line[10000];
     int i_count;
     float c, sl1, sl2, sr1, sr2;
 
