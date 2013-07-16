@@ -45,7 +45,8 @@ then
     chrms=`echo $chrms | tr ',' '_'`_
 fi
 
-mmr="$HOME/git/software/RNAgeeq/mm_resolve/threaded_oop_mip/mmr_test"
+#mmr="$HOME/git/software/RNAgeeq/mm_resolve/threaded_oop_mip/mmr_test"
+mmr="$HOME/git/software/RNAgeeq/mm_resolve/mmr"
 
 filename="${genes}_genes_${size}_reads/hg19_${chrms}subsample_${genes}_genes.gtf.${noise}fastq.gz.mapped.${stage}"
 target=${filename}.mmr${filter}

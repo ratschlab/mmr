@@ -6,7 +6,7 @@ function run_rquant(readlen, experiment, noise)
     addpath('~/git/tools/genomes');
     addpath('~/git/software/rQuant/src');
 
-    exp_size ='3000000';
+    exp_size ='500000';
     genenum = '5000';
     %chrms = 'chr2_chr3_chr4_';
     chrms = '';

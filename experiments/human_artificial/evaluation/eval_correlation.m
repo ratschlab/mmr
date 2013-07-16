@@ -2,7 +2,7 @@
 %%% import corralation function mycorr
 addpath ~/git/projects/2011/rquant/evaluation/
 
-readnum = '3000000';
+readnum = '500000';
 gene_num = '5000';
 
 %noise_levels = {'noise0.01', 'noise0.02', 'noise0.03', ''};
@@ -49,9 +49,9 @@ for n_idx = 1:length(noise_levels),
         if ~isfield(genes, 'expr_orig'),
             genes = add_orig_expression(sprintf('%s/genes.mat', experiment), sprintf('%s_genes_%s_reads/hg19_%ssubsample_%s_genes.gtf.pro', gene_num, readnum, chrms, gene_num));
         end;
-        if ~isfield(genes, 'multi_frac'),
-            genes = add_multimap_info(sprintf('%s/genes.mat', experiment), sprintf('%s/hg19_subsample_%s_genes.gtf.fastq.gz.mapped.%i', experiment, gene_num, stage));
-        end;
+        %if ~isfield(genes, 'multi_frac'),
+        %    genes = add_multimap_info(sprintf('%s/genes.mat', experiment), sprintf('%s/hg19_subsample_%s_genes.gtf.fastq.gz.mapped.%i', experiment, gene_num, stage));
+        %%end;
         if ~isfield(genes, 'transcript_length'),
             genes = add_transcript_length(sprintf('%s/genes.mat', experiment));
         end;
@@ -112,12 +112,12 @@ for n_idx = 1:length(noise_levels),
             %%% extract all transcripts and their IDs from the gene structure
             art.IDs = [art_orig(:).transcripts]';
             art.expr = [art_orig(:).expr_orig]';
-            art.multi_frac = [art_orig(:).multi_frac]';
+            %art.multi_frac = [art_orig(:).multi_frac]';
 
             %%% filter by mm percentile
-            [art.multi_frac s_idx] = sort(art.multi_frac, 1, 'descend');
-            art.expr = art.expr(s_idx);
-            art.IDs = art.IDs(s_idx);
+            %[art.multi_frac s_idx] = sort(art.multi_frac, 1, 'descend');
+            %art.expr = art.expr(s_idx);
+            %art.IDs = art.IDs(s_idx);
                 
             p = floor(length(art.multi_frac) * perc); 
             art.expr = art.expr(1:p);

@@ -42,7 +42,8 @@ then
     chrms=`echo $chrms | tr ',' '_'`_
 fi
 
-mmr="$HOME/git/software/RNAgeeq/mm_resolve/threaded_oop_mip/mmr_test"
+#mmr="$HOME/git/software/RNAgeeq/mm_resolve/threaded_oop_mip/mmr_test"
+mmr="$HOME/git/software/RNAgeeq/mm_resolve/mmr"
 
 filename="${genes}_genes_${size}_reads/tophat/hg19_${chrms}subsample_${genes}_genes.gtf.${noise}fastq.gz/accepted_hits.ID_sorted.bam"
 if [ ! -f "$filename" ]
@@ -54,7 +55,8 @@ fi
 target=${filename}.mmr${filter}
 if [ ! -f "$target" ]
 then
-    time $mmr -w 20 -t $threads -p -b -T samtools -F $filter -v -I 5 -o $target $filename > ${target}.log
+    #time $mmr -w 20 -t $threads -p -b -T samtools -F $filter -v -I 5 -o $target $filename > ${target}.log
+    time $mmr -r 2 -w 20 -t $threads -p -b -T samtools -F $filter -v -I 5 -o $target $filename > ${target}.log
     samtools sort $target ${target}.sorted
     samtools index ${target}.sorted.bam
     old_pwd=$(pwd)
