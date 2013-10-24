@@ -31,6 +31,7 @@ Config* conf;
 bool done;
 
 pthread_mutex_t mutex_coverage = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_int_coverage = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_fifo = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_done = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_best_left = PTHREAD_MUTEX_INITIALIZER;

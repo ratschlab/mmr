@@ -8,6 +8,7 @@ extern GeneralData* genData;
 extern Config* conf;
 
 extern pthread_mutex_t mutex_coverage;
+extern pthread_mutex_t mutex_int_coverage;
 extern pthread_mutex_t mutex_fifo;
 extern pthread_mutex_t mutex_done;
 extern pthread_mutex_t mutex_best_left;
@@ -345,12 +346,14 @@ void Alignment::update_coverage_map(bool positive) {
                             map<pair<unsigned long, unsigned long>, unsigned int> tmp;
                             genData->intron_coverage_map.insert(pair<pair<unsigned char, unsigned char>, map< pair<unsigned long, unsigned long>, unsigned int> >(pair<unsigned char, unsigned char>(this->chr, this->strand), tmp));
                         }
+                        pthread_mutex_lock(&mutex_int_coverage);
                         map< pair<unsigned long, unsigned long>, unsigned int>::iterator it = genData->intron_coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].find(pair<unsigned long, unsigned long>(pos, pos + this->sizes.at(i) - 1));
                         if (it != genData->intron_coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].end()) {
                             assert(it->second > 0 || positive);
                             it->second += (it->second > 0 || positive) ? (2*positive - 1) : 0;
                         } else
                             genData->intron_coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].insert(pair<pair<unsigned long, unsigned long>, unsigned int>(pair<unsigned long, unsigned long>(pos, pos + this->sizes.at(i) - 1), 1));
+                        pthread_mutex_unlock(&mutex_int_coverage);
                         pos += this->sizes.at(i);
                         idx += this->sizes.at(i);
                       }
