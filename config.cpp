@@ -29,15 +29,15 @@ Config::Config(int argc, char *argv[]) {
             use_pair_info = true;
         } else if (!strcmp(argv[i], "-S") || !strcmp(argv[i], "--strand-specific")) {
             strand_specific = true;
-        } else if (!strcmp(argv[i], "-m") || !strcmp(argv[i], "--mip-objective")) {
+        } else if (!strcmp(argv[i], "-m") || !strcmp(argv[i], "--mitie-objective")) {
             use_mip_objective = true;
-        } else if (!strcmp(argv[i], "-M") || !strcmp(argv[i], "--mip-variance")) {
+        } else if (!strcmp(argv[i], "-M") || !strcmp(argv[i], "--mitie-variance")) {
             use_mip_variance = true;
         } else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "--max-fragment-size")) {
             max_gen_frag_size = atoi(argv[++i]);
 //        } else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--insert-dev")) {
 //            insert_dev = (double) atof(argv[++i]);
-        } else if (!strcmp(argv[i], "-f") || !strcmp(argv[i], "--pre-filter")) {
+        } else if (!strcmp(argv[i], "-f") || !strcmp(argv[i], "--pre-filter-off")) {
             pre_filter = false;
         } else if (!strcmp(argv[i], "-P") || !strcmp(argv[i], "--parse-complete")) {
             parse_complete = true;
@@ -99,7 +99,7 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-C --init-secondary  \tchoose initial alignment also from secondary lines (flag 256) [off]\n");
     // Filter options
     fprintf(stderr, "\n\tInput file filtering:\n");
-    fprintf(stderr, "\t-f --pre-filter \tswitch off pre filter for alignments that have F more edit ops than the best [on]\n");
+    fprintf(stderr, "\t-f --pre-filter-off \tswitch off pre filter for alignments that have F more edit ops than the best [on]\n");
     fprintf(stderr, "\t-F --filter-dist [INT]\tfilter distance F for pre-filter [1]\n");
     fprintf(stderr, "\t-V --use-variants \tuse variant alignments for filtering (different edit op count,\n");
     fprintf(stderr, "\t\t\t\trequires XG and XM Tag in alignment files) [off]\n");
@@ -119,11 +119,11 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-I --iterations  [INT]\tnumber of iterations to smooth the coverage [5]\n");
     // MIP Options
     fprintf(stderr, "\n\tOptions for using the MiTie objective for smoothing:\n");
-    fprintf(stderr, "\t-m --mip-objective \tuse objective from MiTie instead of local variance [off]\n");
-    fprintf(stderr, "\t-s --segmentfile \tsegment file required for mip optimization []\n");
-    fprintf(stderr, "\t-l --lossfile \t\tloss parameter file required for mip optimization []\n");
+    fprintf(stderr, "\t-m --mitie-objective \tuse objective from MiTie instead of local variance [off]\n");
+    fprintf(stderr, "\t-s --segmentfile \tMiTie segment file required for MiTie optimization []\n");
+    fprintf(stderr, "\t-l --lossfile \t\tMiTie loss parameter file required for MiTie optimization []\n");
     fprintf(stderr, "\t-r --read-len  [INT]\taverage length of the reads [75]\n");
-    fprintf(stderr, "\t-M --mip-variance \tuse variance smoothing for regions with no MiTie prediction [off]\n");
+    fprintf(stderr, "\t-M --mitie-variance \tuse variance smoothing for regions with no MiTie prediction [off]\n");
     fprintf(stderr, "\t-z --zero-expect-unpred \tinitializes all covered but not predicted positions with expectation 0.0 [off]\n");
     // General options
     fprintf(stderr, "\n\tGeneral:\n");
@@ -157,12 +157,12 @@ void Config::print_call(std::string prog_name) {
     if (use_mip_variance || ! use_mip_objective) {
         fprintf(stdout, "\t window size:          %i\n", window_size);
     } else {
-        fprintf(stdout, "\t use mip objective:    %s\n", use_mip_objective?"on":"off");
+        fprintf(stdout, "\t use MiTie objective:    %s\n", use_mip_objective?"on":"off");
         fprintf(stdout, "\t segment file:         %s\n", segmentfile.c_str()); 
         fprintf(stdout, "\t loss file:            %s\n", lossfile.c_str()); 
         fprintf(stdout, "\t read length:          %i\n", read_len); 
         fprintf(stdout, "\t zero for unpred seg:  %s\n", zero_unpred?"yes":"no");
-        fprintf(stdout, "\t use variance if no mip-segment overlaps: %s\n", use_mip_variance?"on":"off");
+        fprintf(stdout, "\t use variance if no MiTie-segment overlaps: %s\n", use_mip_variance?"on":"off");
     }
 }
 
