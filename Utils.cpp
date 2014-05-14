@@ -5,6 +5,7 @@
 #include <cmath>
 #include <algorithm>
 #include <assert.h>
+#include <unistd.h>
 
 #include "Alignment.h"
 #include "GeneralData.h"
