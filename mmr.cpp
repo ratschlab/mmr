@@ -26,7 +26,7 @@
 using namespace std;
 
 // global variables
-GeneralData* genData = new GeneralData::GeneralData();
+GeneralData* genData = new GeneralData();
 Config* conf;
 bool done;
 
@@ -247,7 +247,7 @@ void *process_data_online_wrapper(void *arg) {
 
 int main(int argc, char *argv[]) {
 
-    conf = new Config::Config(argc, argv);
+    conf = new Config(argc, argv);
 
     if (conf->verbose)
         conf->print_call(argv[0]);
