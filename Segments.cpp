@@ -15,7 +15,7 @@ void Segments::get_from_file() {
 		exit(2);
 	}
     char* ret;
-    char line[1000];
+    char line[10000];
     long segment_id = 0;
     long intron_id = 0;
 

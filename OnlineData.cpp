@@ -394,8 +394,8 @@ void OnlineData::get_active_reads(string read_id, set<vector<Alignment>::iterato
     
 char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData, unsigned int &counter, clock_t &start_clock, clock_t &start_time) {
 
-    char line[1000] ;
-    char cp_line[1000];
+    char line[10000] ;
+    char cp_line[10000];
     char* ret = last_line;
 
     unsigned char pair_info = 0;

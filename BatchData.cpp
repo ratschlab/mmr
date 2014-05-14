@@ -66,8 +66,8 @@ void BatchData::pre_filter_alignment_maps() {
 
 void BatchData::parse_file() {
 
-    char line[1000] ;
-    char cp_line[1000];
+    char line[10000] ;
+    char cp_line[10000];
     char* ret;
 
     unsigned int counter = 0;
