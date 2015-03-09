@@ -76,3 +76,8 @@ Available Options:
 	-v --verbose 		switch on verbose output [off]
 	-h --help 		print usage info
 
+
+License
+
+This documentation is subject to the GNU Free Documentation License 
+as given in file LICENSE.
