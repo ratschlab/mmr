@@ -1,5 +1,5 @@
 # mmr
-MMR: A Tool for Alignment Multi-Mapper Resolution 
+MMR: A Tool for Read Multi-Mapper Resolution 
 
 Motivation:
 Mapping high throughput sequencing data to a reference genome is an
@@ -22,3 +22,9 @@ quantification tool.  Our efficient implementation of the MMR
 algorithm is easily applicable as a post-processing step to existing
 alignment files in BAM format. Its complexity scales linearly with the
 number of alignments and requires no further inputs.
+
+Availability:
+The source code is public under GPLv3 and can be downloaded from 
+GitHub (https://github.com/ratschlab/mmr).
+Supplemental text and figures, comprehensive testing results and
+further information can be found at http://bioweb.me/mmr.
