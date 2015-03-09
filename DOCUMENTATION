@@ -1,0 +1,43 @@
+Usage:
+	./mmr -o OUTFILE [options] IN_BAM
+
+Available Options:
+
+
+	Input handling and paralellization:
+	-P --parse-complete 	parse complete file into memory [off]
+	-t --threads 		number of threads to use (must be > 2) [1]
+	-S --strand-specific 	alignments are strand specific [off]
+	-C --init-secondary  	choose initial alignment also from secondary lines (flag 256) [off]
+
+	Input file filtering:
+	-f --pre-filter-off 	switch off pre filter for alignments that have F more edit ops than the best [on]
+	-F --filter-dist [INT]	filter distance F for pre-filter [1]
+	-V --use-variants 	use variant alignments for filtering (different edit op count,
+				requires XG and XM Tag in alignment files) [off]
+	-L --max-list-length [INT]	max length of alignment list per read (after filtering) [1000]
+
+	Paired alignment handling:
+	-p --pair-usage 	pre use pair information in the reads [off]
+	-i --max-fragment-size 	upper limit of GENOMIC fragment length [1 000 000]
+	-A --max-pair-list-length [INT]	max no of valid pairs before not using pair modus [10000]
+
+	Output handling:
+	-b --best-only 		print only best alignment [off]
+
+	Options for using the variance optimization:
+	-w --windowsize  [INT]	size of coverage window around read [20]
+	-I --iterations  [INT]	number of iterations to smooth the coverage [5]
+
+	Options for using the MiTie objective for smoothing:
+	-m --mitie-objective 	use objective from MiTie instead of local variance [off]
+	-s --segmentfile 	MiTie segment file required for MiTie optimization []
+	-l --lossfile 		MiTie loss parameter file required for MiTie optimization []
+	-r --read-len  [INT]	average length of the reads [75]
+	-M --mitie-variance 	use variance smoothing for regions with no MiTie prediction [off]
+	-z --zero-expect-unpred 	initializes all covered but not predicted positions with expectation 0.0 [off]
+
+	General:
+	-v --verbose 		switch on verbose output [off]
+	-h --help 		print usage info
+
