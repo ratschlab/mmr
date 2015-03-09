@@ -28,3 +28,8 @@ The source code is public under GPLv3 and can be downloaded from
 GitHub (https://github.com/ratschlab/mmr).
 Supplemental text and figures, comprehensive testing results and
 further information can be found at http://bioweb.me/mmr.
+
+Documentation:
+The user documentation and a description of the commandline parameters 
+are available in file DOCUMENTATION.
+

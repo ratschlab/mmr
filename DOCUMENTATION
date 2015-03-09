@@ -1,3 +1,38 @@
+MMR: A Tool for Read Multi-Mapper Resolution
+
+Motivation
+
+Mapping high throughput sequencing data to a reference genome is an
+essential step for most analysis pipelines aiming at the computational
+analysis of genome and transcriptome sequencing data. Breaking ties
+between equally likely mapping locations still poses a severe problem
+not only during the alignment phase but also has significant impact
+how the data can be used for further analyses. We present the
+multimapper resolution (MMR) tool that infers the best mapping
+location only on the distribution of mapped reads.
+
+Principle
+
+We follow a simple strategy that locally minimizes the variability
+("roughness") of position-wise coverage within a window of given
+length.  By comparing the local "roughness" around two possible
+alignments/mappings of the same read, we can iteratively select the
+best alignments/mappings for all reads to obtain "smooth" coverage
+everywhere. Additional information, such as transcript structure, to
+accounting for expected differences in local coverage can be
+incorporated. 
+
+
+Common Usage
+
+The tool takes a read alignment file in BAM format as input. The input 
+BAM file is assumed to have multiple alignments per read.
+The output is a new BAM file that has selected alignment marked in the 
+tags. If one uses the -b option, at most one alignment will be saved per 
+read which can lead to a significant file size reduction.
+The individual arguments are described below.
+
+
 Usage:
 	./mmr -o OUTFILE [options] IN_BAM
 
@@ -40,4 +75,7 @@ Available Options:
 	General:
 	-v --verbose 		switch on verbose output [off]
 	-h --help 		print usage info
+
+
+Written by Andre Kahles, Jonas Behr and Gunnar R\"atsch, 2010-2015
 
