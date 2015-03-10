@@ -1,4 +1,3 @@
-# mmr
 MMR: A Tool for Read Multi-Mapper Resolution 
 ============================================
 
