@@ -1,7 +1,8 @@
 MMR: A Tool for Read Multi-Mapper Resolution
+============================================
 
 Motivation
-
+----------
 Mapping high throughput sequencing data to a reference genome is an
 essential step for most analysis pipelines aiming at the computational
 analysis of genome and transcriptome sequencing data. Breaking ties
@@ -12,7 +13,7 @@ multimapper resolution (MMR) tool that infers the best mapping
 location only on the distribution of mapped reads.
 
 Principle
-
+---------
 We follow a simple strategy that locally minimizes the variability
 ("roughness") of position-wise coverage within a window of given
 length.  By comparing the local "roughness" around two possible
@@ -22,9 +23,21 @@ everywhere. Additional information, such as transcript structure, to
 accounting for expected differences in local coverage can be
 incorporated. 
 
+Installation and Dependencies
+-----------------------------
+MMR has been developed in a *nix environment and has been successfully
+compiled using gcc versions 4.4.7 and above. 
+
+For compiling on MacOS X, it is necessary to exchange the native gcc
+compiler with a newer version (e.g., install gcc47 via macports and
+make it available by 'sudo port select --set gcc mp-gcc47').
+
+Further, to successfully parse alignment files in BAM format, MMR
+requires a working samtools binary that is accessibly via the PATH
+environment variable.
 
 Common Usage
-
+------------
 The tool takes a read alignment file in BAM format as input. The input 
 BAM file is assumed to have multiple alignments per read.
 The output is a new BAM file that has selected alignment marked in the 
@@ -76,8 +89,33 @@ Available Options:
 	-v --verbose 		switch on verbose output [off]
 	-h --help 		print usage info
 
+Input File Formats
+-------------------
+Input alignment files are expected to follow the SAM format
+specification and should have compressed (BAM) format.
 
+The files required for an optimization in the context of MiTie have
+the following formats:
+
+    loss file: Tab delimited file that describes the support points of
+        the loss function. The file needs to have the following five
+        columns:
+            1   observation             int
+            2   quadratic term left     float
+            3   linear term left        float
+            4   quadratic term right    float
+            5   linear term right       float
+
+    segment file: Tab delimited file with six columns that defines
+        intronic and exonic segments as follows:
+            1   segment category        s for exonic, i for intronic
+            2   contig/chromosome name  STR
+            3   strand                  +/-
+            4   segment start           int (closed interval) 
+            5   segment end             int (closed interval)
+            6   segment evidence        float
+        
 License
-
+-------
 This documentation is subject to the GNU Free Documentation License 
 as given in file LICENSE.
