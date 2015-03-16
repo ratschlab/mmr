@@ -36,6 +36,15 @@ Further, to successfully parse alignment files in BAM format, MMR
 requires a working samtools binary that is accessibly via the PATH
 environment variable.
 
+You can test the success of your installation with the example data 
+contained within this package. A smaller test case is available by
+typing:
+    make test
+If you have more than 13GB of memory available you can also run the
+test on the human genome using:
+    make bigtest
+Each test will state at the end whether it was completed successfully.
+
 Common Usage
 ------------
 The tool takes a read alignment file in BAM format as input. The input 
@@ -52,7 +61,7 @@ Usage:
 Available Options:
 
 
-	Input handling and paralellization:
+	Input handling and parallelization:
 	-P --parse-complete 	parse complete file into memory [off]
 	-t --threads 		number of threads to use (must be > 2) [1]
 	-S --strand-specific 	alignments are strand specific [off]
