@@ -403,7 +403,7 @@ int main(int argc, char *argv[]) {
                 pthread_attr_init(&attr);
                 pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
                 
-                for (tid = 0; tid < conf->num_threads - 1; tid++) {
+                for (size_t tid = 0; tid < conf->num_threads - 1; tid++) {
                    pthread_create(&threads[tid], &attr, process_data_online_wrapper, (void *) tid); 
                 }
             }
