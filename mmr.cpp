@@ -460,6 +460,7 @@ int main(int argc, char *argv[]) {
 
             genData->total_loss = 0.0;
             genData->num_altered = 0;
+            genData->num_tested = 0;
 
             string last_id = string("");
             clock_t start_clock = clock();
@@ -506,6 +507,7 @@ int main(int argc, char *argv[]) {
 
             if (conf->verbose) { 
                 fprintf(stdout, "\nsuccessfully parsed %i lines\n", counter - 1);
+                fprintf(stdout, "tested %i alignments\n", genData->num_tested);
                 fprintf(stdout, "changed %i alignments\n", genData->num_altered);
                 fprintf(stdout, "total objective: %f\n", (float) genData->total_loss);
                 if (conf->use_mip_objective)

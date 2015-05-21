@@ -64,6 +64,7 @@ struct GeneralData {
     // count data 
     double total_loss;
     unsigned int num_altered;
+    unsigned int num_tested;
 
     // loss by segment id
     map<long, double> loss_by_segment;

@@ -61,6 +61,7 @@ void OnlineData::process_data_online(GeneralData* genData) {
     set<vector<Alignment>::iterator> ignore_idx_right;
 
     unsigned int num_changed = 0;
+    unsigned int num_tested = 0;
     double min_loss = numeric_limits<double>::max();
     double total_min_loss = 0.0;
     double loss = 0.0;
@@ -127,8 +128,12 @@ void OnlineData::process_data_online(GeneralData* genData) {
 
         bool changed = false;
         for(lv_idx = active_left_reads.begin(), rv_idx = active_right_reads.begin(); lv_idx != active_left_reads.end() && rv_idx != active_right_reads.end(); lv_idx++, rv_idx++) {
-            if ((*lv_idx) == best_left_idx && (*rv_idx) == best_right_idx)
+            if ((*lv_idx) == best_left_idx && (*rv_idx) == best_right_idx) {
+                get_paired_loss(*lv_idx, *rv_idx, loss); 
+                if (loss >= 0.0)
+                    min_loss = min(min_loss, loss);
                 continue;
+            }
             if (compare_pair(*lv_idx, *rv_idx, best_left_idx, best_right_idx, loss)) {
 
                 changed = true;
@@ -192,6 +197,7 @@ void OnlineData::process_data_online(GeneralData* genData) {
                 min_loss = min(min_loss, loss);
         }
         total_min_loss += (min_loss < numeric_limits<double>::max()) ? min_loss : 0;
+        num_tested++;
         if (changed) 
             num_changed++;
 
@@ -211,8 +217,12 @@ void OnlineData::process_data_online(GeneralData* genData) {
         }
         bool changed = false;
         for (lv_idx = active_left_reads.begin(); lv_idx != active_left_reads.end(); lv_idx++) {
-            if (*lv_idx == *curr_best)
+            if (*lv_idx == *curr_best) {
+                get_single_loss(*lv_idx, loss); 
+                if (loss >= 0.0)
+                    min_loss = min(min_loss, loss);
                 continue;
+            }
 
             vector<Alignment>::iterator old_best = *curr_best;
             // check if lv_idx < curr_best
@@ -262,6 +272,7 @@ void OnlineData::process_data_online(GeneralData* genData) {
                 min_loss = min(min_loss, loss);
         }
         total_min_loss += (min_loss < numeric_limits<double>::max()) ? min_loss : 0;
+        num_tested++;
         if (changed) 
             num_changed++;
 
@@ -328,6 +339,7 @@ void OnlineData::process_data_online(GeneralData* genData) {
                 min_loss = min(min_loss, loss);
         }
         total_min_loss += (min_loss < numeric_limits<double>::max()) ? min_loss : 0;
+        num_tested++;
         if (changed) 
             num_changed++;
 
@@ -335,6 +347,7 @@ void OnlineData::process_data_online(GeneralData* genData) {
     pthread_mutex_lock(&mutex_counter);
     genData->total_loss += total_min_loss;
     genData->num_altered += num_changed;
+    genData->num_tested += num_tested;
     pthread_mutex_unlock(&mutex_counter);
     delete this;
 }

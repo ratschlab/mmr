@@ -59,6 +59,10 @@ string update_line_flag(char* line, bool is_best);
 
 void parse_header(char* sl);
 
+void get_single_loss(vector<Alignment>::iterator candidate, double &loss, bool debug = false);
+
+void get_paired_loss(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, double &loss, bool debug = false);
+
 bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, vector<Alignment>::iterator best_left, vector<Alignment>::iterator best_right, double &loss, bool debug = false);
 
 bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::iterator best, double &loss, bool debug = false);

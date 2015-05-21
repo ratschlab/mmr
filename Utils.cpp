@@ -96,7 +96,7 @@ double get_variance(vector<vector<unsigned long> > &exon_coverage) {
 
     double total_var = 0.0;
     for (size_t i = 0; i < exon_coverage.size(); i++) {
-        if (exon_coverage.size() < 2) {
+        if (exon_coverage.at(i).size() < 2) {
             continue;
         } else {
             double sum = 0.0;
@@ -220,9 +220,6 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
     if (conf->use_mip_objective) {
        
         // compute overlap between candidate alignments
-        set<unsigned long> already_covered_pos;
-        set<unsigned long> not_covered_pos;
-        set<unsigned long> empty_set;
         set<unsigned long> overlap;
         set<unsigned long> genome_pos_cl = candidate_left->get_genome_pos();
         set<unsigned long> genome_pos_cr = candidate_right->get_genome_pos();
@@ -327,6 +324,89 @@ void compute_coverage_loss(vector<pair<vector<Alignment>::iterator,bool> > align
     }
 }
 
+
+void get_paired_loss(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, double &loss, bool debug) {
+
+    bool used_mip = false;
+    double candidate_loss = 0.0;
+
+    if (conf->use_mip_objective) {
+        set<unsigned long> genome_pos_cl = candidate_left->get_genome_pos();
+        set<unsigned long> empty_set;
+        pair<double, double> loss_candidate;
+
+        // loss candidate
+        vector<vector<Alignment>::iterator> candidate;
+        candidate.push_back(candidate_left);
+        candidate.push_back(candidate_right);
+
+        loss_candidate = genData->segments.get_exon_segment_loss(candidate, empty_set, debug);
+
+        if (loss_candidate.first >= 0.0) {
+            candidate_loss = loss_candidate.first;
+            used_mip = true;
+        }
+    }
+
+    if (! conf->use_mip_objective || ! used_mip) {
+
+        vector<vector<unsigned long> > cov;
+
+        vector<unsigned long> tmp1, tmp2;
+        cov.push_back(tmp1);
+        candidate_left->fill_coverage_vector(cov.back());
+        cov.push_back(tmp2);
+        candidate_right->fill_coverage_vector(cov.back());
+
+        candidate_loss += get_variance(cov);
+    }
+
+    if (conf->use_mip_objective && ! used_mip) {
+        loss = -1.0;
+    } else {
+        loss = candidate_loss;
+    }
+}
+
+
+void get_single_loss(vector<Alignment>::iterator candidate, double &loss, bool debug) {
+
+    bool used_mip = false;
+    double candidate_loss = 0.0;
+
+    if (conf->use_mip_objective) {
+
+        set<unsigned long> genome_pos_candidate = candidate->get_genome_pos();
+        set<unsigned long> empty_set;
+        set<unsigned long> overlap;
+        pair<double, double> loss_candidate;
+
+        vector<vector<Alignment>::iterator> cand_tmp;
+        cand_tmp.push_back(candidate);
+        loss_candidate = genData->segments.get_exon_segment_loss(cand_tmp, empty_set, debug);
+
+        if (loss_candidate.first >= 0.0) {
+            used_mip = true;
+        }
+        candidate_loss +=  (loss_candidate.first >= 0.0) ? loss_candidate.first : 0;
+    }
+
+    if (! conf->use_mip_objective || ! used_mip) {
+        vector<vector<unsigned long> > cov;
+        vector<unsigned long> tmp;
+        cov.push_back(tmp);
+        candidate->fill_coverage_vector(cov.back());
+        candidate_loss += get_variance(cov);
+    }
+
+    if (conf->use_mip_objective && ! used_mip) {
+        loss = -1.0;
+    } else {
+        loss = candidate_loss;
+    }
+}
+
+
 bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::iterator best, double &loss, bool debug) {
 
     bool used_mip = false;
@@ -344,7 +424,6 @@ bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::it
         // compute overlap between candidate and best alignments
         set<unsigned long> genome_pos_candidate = candidate->get_genome_pos();
         set<unsigned long> genome_pos_best = best->get_genome_pos();
-        set<unsigned long> empty_set;
 
         vector<vector<Alignment>::iterator> cand_tmp;
         vector<vector<Alignment>::iterator> best_tmp;
