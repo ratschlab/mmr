@@ -45,6 +45,7 @@ struct GeneralData {
     vector <unsigned int> chr_size;
     vector <unsigned int> chr_size_cum;
     map <pair<unsigned int, unsigned char>, vector<unsigned int> > coverage_map; // contains coverage vector for each chr/strand pair
+    map <pair<unsigned int, unsigned char>, vector<bool> > breakpoint_map; // contains breakpoint coordinates induced by annotated segment boundaries
 
     // intron coverage map (will only be used for Mitie optimization)
     // outer map: keys -> chr/strand pair  values -> intron map
@@ -63,6 +64,7 @@ struct GeneralData {
 
     // count data 
     double total_loss;
+    double total_gain;
     unsigned int num_altered;
     unsigned int num_tested;
 
