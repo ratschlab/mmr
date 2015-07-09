@@ -30,6 +30,7 @@
 #include <cstdio>
 #include <vector>
 #include <set>
+#include <deque>
 #include <cmath>
 #include <algorithm>
 #include <assert.h>
@@ -92,27 +93,139 @@ double intron_penalty(vector<unsigned int> &intron_coverage) {
     return sum;
 }
 
-double get_variance(vector<vector<unsigned long> > &exon_coverage) {
+
+double get_variance_global() {
 
     double total_var = 0.0;
-    for (size_t i = 0; i < exon_coverage.size(); i++) {
-        if (exon_coverage.at(i).size() < 2) {
-            continue;
+    double total_cov = 0.0;
+
+    // iterate over chromosomes
+    for (map <pair<unsigned int, unsigned char>, vector<unsigned int> >::iterator it = genData->coverage_map.begin(); it != genData->coverage_map.end(); it++) {
+
+        double sum = 0.0;
+        double sum_sq = 0.0;
+        double mean = 0.0;
+        double var = 0.0;
+        deque<double> cov;
+        
+        // collect segment sizes in case we have annotated segment information
+        vector<unsigned long> seg_size;
+        if (conf->use_brkpts) {
+            unsigned long s = 1;
+            for (size_t i = 1; i < genData->breakpoint_map[it->first].size(); i++) {
+                if (genData->breakpoint_map[it->first].at(i)) {
+                    seg_size.push_back(s);
+                    s = 0;
+                }
+                s++;
+            }
+            if (s > 0)
+                seg_size.push_back(s);
         } else {
-            double sum = 0.0;
-            for ( vector<unsigned long>::iterator it = exon_coverage.at(i).begin(); it != exon_coverage.at(i).end(); it++) {
-                sum += (double) *it;
+            seg_size.push_back(it->second.size());
+        }   
+
+        size_t cov_idx = 0;
+        for (size_t j = 0; j < seg_size.size(); j++) {
+            if (seg_size.at(j) < 2) {
+                cov_idx++;
+                continue;
             }
-            double mean = sum / (double) exon_coverage.at(i).size();
             sum = 0.0;
-            for ( vector<unsigned long>::iterator it = exon_coverage.at(i).begin(); it != exon_coverage.at(i).end(); it++) {
-                sum += pow((double) *it - mean, 2.0);
+            sum_sq = 0.0;
+            mean = 0.0;
+            var = 0.0;
+            cov.clear();
+            unsigned long max_size = min((unsigned long) conf->window_size, seg_size.at(j));
+            for (size_t i = 0; i < seg_size.at(j); i++) {
+                total_cov += it->second.at(cov_idx);
+                if (i < max_size) {
+                    cov.push_back((double) it->second.at(cov_idx));
+                    sum += (double) it->second.at(cov_idx);
+                    sum_sq += pow((double) it->second.at(cov_idx), 2.0);
+                    cov_idx++;
+                    if (i == (max_size - 1)) {
+                        mean = sum / (double) cov.size();
+                        var = (sum_sq + (mean * (double) cov.size() * mean) - (mean * 2 * sum));
+                    } else {
+                        continue;
+                    }
+                } else {
+                    cov.push_back((double) it->second.at(cov_idx));
+                    cov_idx++;
+                    sum += (cov.back() - cov.front());
+                    mean = sum / ((double) cov.size() - 1.0);
+                    sum_sq += (pow(cov.back(), 2.0) - pow(cov.front(), 2.0));
+                    cov.pop_front();
+                    var = (sum_sq + (mean * (double) cov.size() * mean) - (mean * 2 * sum));
+                }
+                total_var += (var / ((double) cov.size() - 1.0));
+                //total_var += (sqrt(var / ((double) cov.size() - 1.0)) / mean);
+                //if (it->first.first == 5 && cov_idx >= 107552486 && cov_idx <= 107556023) { 
+                //    fprintf(stdout, "glob (%f): ", var / ((double) cov.size() - 1.0));
+                //    for (deque<double>::iterator c = cov.begin(); c != cov.end(); c++)
+                //        fprintf(stdout, "%.0f ", *c);
+                //    fprintf(stdout, "\n");
+                //}
             }
-            total_var += (sum / ((double) exon_coverage.at(i).size() - 1.0));  
+        }
+    }
+    //fprintf(stdout, "total cov %f\n", total_cov);
+    return total_var;
+}
+
+double get_variance(vector<vector<vector<unsigned long> > > &exon_coverage, vector<vector<set<unsigned long> > > &genome_pos) {
+
+    double total_var = 0.0;
+    set<unsigned long> already_seen;
+    set<unsigned long>::iterator gp;
+    for (size_t k = 0; k < exon_coverage.size(); k++) {
+        for (size_t j = 0; j < exon_coverage.at(k).size(); j++) {
+            if (exon_coverage.at(k).at(j).size() < 2)
+                continue;
+            double sum = 0.0;
+            double sum_sq = 0.0;
+            double mean = 0.0;
+            double var = 0.0;
+            deque<double> cov;
+            unsigned long max_size = min((unsigned long) conf->window_size, exon_coverage.at(k).at(j).size());
+            for (size_t i = 0; i < exon_coverage.at(k).at(j).size(); i++) {
+                if (i == 0)
+                    gp = genome_pos.at(k).at(j).begin();
+                else
+                    gp++;
+                if (i < max_size) {
+                    cov.push_back((double) exon_coverage.at(k).at(j).at(i));
+                    sum += (double) exon_coverage.at(k).at(j).at(i);
+                    sum_sq += pow((double) exon_coverage.at(k).at(j).at(i), 2.0);
+                    if (i == (max_size - 1)) {
+                        mean = sum / (double) cov.size();
+                        var = (sum_sq + (mean * (double) cov.size() * mean) - (mean * 2 * sum));
+                    } else {
+                        continue;
+                    }
+                } else {
+                    cov.push_back((double) exon_coverage.at(k).at(j).at(i));
+                    sum += (cov.back() - cov.front());
+                    mean = sum / ((double) cov.size() - 1.0);
+                    sum_sq += (pow(cov.back(), 2.0) - pow(cov.front(), 2.0));
+                    cov.pop_front();
+                    var = (sum_sq + (mean * (double) cov.size() * mean) - (mean * 2 * sum));
+                }
+                if (!(already_seen.find(*gp) != already_seen.end())) {
+                    already_seen.insert(*gp);
+                    total_var += (var / ((double) cov.size() - 1.0));
+                }
+                //fprintf(stdout, "loc (%f): ", var / ((double) cov.size() - 1.0));
+                //for (deque<double>::iterator c = cov.begin(); c != cov.end(); c++)
+                //    fprintf(stdout, "%.0f ", *c);
+                //fprintf(stdout, "\n");
+            }
         }
     }
     return total_var;
 }
+
 
 vector<unsigned int> alter_coverage(vector<unsigned int> &source, unsigned int window_left, unsigned int window_right, bool is_positive) {
 
@@ -193,6 +306,13 @@ void parse_header(char* sl) {
             if (conf->verbose) 
                 fprintf(stdout, "\t...reserving memory for contig %s (+) of size %i\n", chr_name.c_str(), genData->chr_size.back());
             genData->coverage_map.insert( pair<pair<unsigned int, unsigned char>, vector<unsigned int> >(pair<unsigned int, unsigned char>(genData->chr_num[chr_name], '+'), tmp_cov) ); 
+            if (conf->use_brkpts) {
+                vector<bool> tmp_brkp(genData->chr_size.back(), 0);
+                genData->breakpoint_map.insert( pair<pair<unsigned int, unsigned char>, vector<bool> >(pair<unsigned int, unsigned char>(genData->chr_num[chr_name], '+'), tmp_brkp) ); 
+            } else {
+                vector<bool> tmp_brkp;
+                genData->breakpoint_map.insert( pair<pair<unsigned int, unsigned char>, vector<bool> >(pair<unsigned int, unsigned char>(genData->chr_num[chr_name], '+'), tmp_brkp) ); 
+            }
             if (conf->strand_specific) {
                 if (conf->verbose) 
                     fprintf(stdout, "\t...reserving memory for contig %s (-) of size %i\n", chr_name.c_str(), genData->chr_size.back());
@@ -209,7 +329,7 @@ void parse_header(char* sl) {
     }
 }
 
-bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, vector<Alignment>::iterator best_left, vector<Alignment>::iterator best_right, double &loss, bool debug) {
+bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, vector<Alignment>::iterator best_left, vector<Alignment>::iterator best_right, double &loss, double &gain, bool debug) {
 
     bool used_mip = false;
     double candidate_loss = 0.0;
@@ -221,10 +341,10 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
        
         // compute overlap between candidate alignments
         set<unsigned long> overlap;
-        set<unsigned long> genome_pos_cl = candidate_left->get_genome_pos();
-        set<unsigned long> genome_pos_cr = candidate_right->get_genome_pos();
-        set<unsigned long> genome_pos_bl = best_left->get_genome_pos();
-        set<unsigned long> genome_pos_br = best_right->get_genome_pos();
+        set<unsigned long> genome_pos_cl = candidate_left->get_exon_pos();
+        set<unsigned long> genome_pos_cr = candidate_right->get_exon_pos();
+        set<unsigned long> genome_pos_bl = best_left->get_exon_pos();
+        set<unsigned long> genome_pos_br = best_right->get_exon_pos();
 
         pair<double, double> loss_best, loss_cand;
         pair<double, double> loss_cl, loss_cr, loss_bl, loss_br;
@@ -259,8 +379,9 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
     if (! conf->use_mip_objective || ! used_mip) {
 
         // initialize segment coverage
-        vector<vector<unsigned long> > cov_keep;
-        vector<vector<unsigned long> > cov_change;
+        vector<vector<vector<unsigned long> > > cov_keep;
+        vector<vector<vector<unsigned long> > > cov_change;
+        vector<vector<set<unsigned long> > > genome_pos;
 
         // init vectors of candidate and best alignments
         vector<pair<vector<Alignment>::iterator, bool> > aligns;
@@ -270,10 +391,10 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
         aligns.push_back( make_pair(best_right, true) );
 
         // compute coverage
-        compute_coverage_loss(aligns, cov_keep, cov_change);
+        compute_coverage_loss(aligns, cov_keep, cov_change, genome_pos);
         
-        best_loss = get_variance(cov_keep);
-        candidate_loss = get_variance(cov_change);
+        best_loss = get_variance(cov_keep, genome_pos);
+        candidate_loss = get_variance(cov_change, genome_pos);
 
     }
 
@@ -285,33 +406,33 @@ bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>:
  
     if (conf->use_mip_objective && ! used_mip) {
         loss = -1.0;
+        gain = 0.0;
     } else {
         loss = min(candidate_loss, best_loss);
+        gain = max(best_loss - candidate_loss, 0.0);
     }
     return (candidate_loss < best_loss);
 }
+
 
 bool compare_align_iter_start(const pair<vector<Alignment>::iterator, bool> &left, const pair<vector<Alignment>::iterator, bool> &right) {
     return left.first->start < right.first->start;
 }
 
-void compute_coverage_loss(vector<pair<vector<Alignment>::iterator,bool> > aligns, vector<vector<unsigned long> > &cov_keep, vector<vector<unsigned long> > &cov_change) {
+
+void compute_coverage_loss(vector<pair<vector<Alignment>::iterator,bool> > aligns, vector<vector<vector<unsigned long> > > &cov_keep, vector<vector<vector<unsigned long> > > &cov_change, vector<vector<set<unsigned long> > > &genome_pos) {
 
     // sort alignments by starting position
     sort(aligns.begin(), aligns.end(), compare_align_iter_start); 
 
-//    unsigned long first_start = (conf->window_size <= aligns.at(0).first->start)?aligns.at(0).first->start - conf->window_size:0ul;
-
     // determine genomic position set of all alignments (including windows)
-    //set<unsigned long> genome_pos = aligns.at(0).first->get_genome_pos(conf->window_size);
-    vector<set<unsigned long> > genome_pos;
     for (size_t i = 0; i < aligns.size(); i++) {
         genome_pos.push_back(aligns.at(i).first->get_genome_pos(conf->window_size));
     }
 
     // fill coverage maps
     for (size_t i = 0; i < aligns.size(); i++) {
-        vector<unsigned long> tmp;
+        vector<vector<unsigned long> > tmp;
         cov_keep.push_back(tmp);
         aligns.at(i).first->fill_coverage_vector(cov_keep.at(i));
     }
@@ -325,89 +446,7 @@ void compute_coverage_loss(vector<pair<vector<Alignment>::iterator,bool> > align
 }
 
 
-void get_paired_loss(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, double &loss, bool debug) {
-
-    bool used_mip = false;
-    double candidate_loss = 0.0;
-
-    if (conf->use_mip_objective) {
-        set<unsigned long> genome_pos_cl = candidate_left->get_genome_pos();
-        set<unsigned long> empty_set;
-        pair<double, double> loss_candidate;
-
-        // loss candidate
-        vector<vector<Alignment>::iterator> candidate;
-        candidate.push_back(candidate_left);
-        candidate.push_back(candidate_right);
-
-        loss_candidate = genData->segments.get_exon_segment_loss(candidate, empty_set, debug);
-
-        if (loss_candidate.first >= 0.0) {
-            candidate_loss = loss_candidate.first;
-            used_mip = true;
-        }
-    }
-
-    if (! conf->use_mip_objective || ! used_mip) {
-
-        vector<vector<unsigned long> > cov;
-
-        vector<unsigned long> tmp1, tmp2;
-        cov.push_back(tmp1);
-        candidate_left->fill_coverage_vector(cov.back());
-        cov.push_back(tmp2);
-        candidate_right->fill_coverage_vector(cov.back());
-
-        candidate_loss += get_variance(cov);
-    }
-
-    if (conf->use_mip_objective && ! used_mip) {
-        loss = -1.0;
-    } else {
-        loss = candidate_loss;
-    }
-}
-
-
-void get_single_loss(vector<Alignment>::iterator candidate, double &loss, bool debug) {
-
-    bool used_mip = false;
-    double candidate_loss = 0.0;
-
-    if (conf->use_mip_objective) {
-
-        set<unsigned long> genome_pos_candidate = candidate->get_genome_pos();
-        set<unsigned long> empty_set;
-        set<unsigned long> overlap;
-        pair<double, double> loss_candidate;
-
-        vector<vector<Alignment>::iterator> cand_tmp;
-        cand_tmp.push_back(candidate);
-        loss_candidate = genData->segments.get_exon_segment_loss(cand_tmp, empty_set, debug);
-
-        if (loss_candidate.first >= 0.0) {
-            used_mip = true;
-        }
-        candidate_loss +=  (loss_candidate.first >= 0.0) ? loss_candidate.first : 0;
-    }
-
-    if (! conf->use_mip_objective || ! used_mip) {
-        vector<vector<unsigned long> > cov;
-        vector<unsigned long> tmp;
-        cov.push_back(tmp);
-        candidate->fill_coverage_vector(cov.back());
-        candidate_loss += get_variance(cov);
-    }
-
-    if (conf->use_mip_objective && ! used_mip) {
-        loss = -1.0;
-    } else {
-        loss = candidate_loss;
-    }
-}
-
-
-bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::iterator best, double &loss, bool debug) {
+bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::iterator best, double &loss, double &gain, bool debug) {
 
     bool used_mip = false;
     double candidate_loss = 0.0;
@@ -415,15 +454,15 @@ bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::it
 
     pair<double, double> loss_candidate, loss_best;
 
-    debug=false;//true;
+    //debug=false;//true;
 
     // check how objective is to be computed
     // we need segments overlapping at least one of the two candidates
     if (conf->use_mip_objective) {
 
         // compute overlap between candidate and best alignments
-        set<unsigned long> genome_pos_candidate = candidate->get_genome_pos();
-        set<unsigned long> genome_pos_best = best->get_genome_pos();
+        set<unsigned long> genome_pos_candidate = candidate->get_exon_pos();
+        set<unsigned long> genome_pos_best = best->get_exon_pos();
 
         vector<vector<Alignment>::iterator> cand_tmp;
         vector<vector<Alignment>::iterator> best_tmp;
@@ -460,8 +499,9 @@ bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::it
     if (! conf->use_mip_objective || ! used_mip) {
 
         // initialize segment coverage
-        vector<vector<unsigned long> > cov_keep;
-        vector<vector<unsigned long> > cov_change;
+        vector<vector<vector<unsigned long> > > cov_keep;
+        vector<vector<vector<unsigned long> > > cov_change;
+        vector<vector<set<unsigned long> > > genome_pos;
 
         // init vectors of candidate and best alignments
         vector<pair<vector<Alignment>::iterator, bool> > aligns;
@@ -469,24 +509,71 @@ bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::it
         aligns.push_back( make_pair(best, true) );
 
         // compute coverage
-        compute_coverage_loss(aligns, cov_keep, cov_change);
+        compute_coverage_loss(aligns, cov_keep, cov_change, genome_pos);
         
-        best_loss = get_variance(cov_keep);
-        candidate_loss = get_variance(cov_change);
+        best_loss = get_variance(cov_keep, genome_pos);
+        candidate_loss = get_variance(cov_change, genome_pos);
         if (debug) {
             fprintf(stdout, "candidate (single):\n");
             candidate->print();
             fprintf(stdout, "best (single):\n");
             best->print();
             fprintf(stdout, "cov_keep (single):\n");
+            unsigned long ss = 0;
+            int pp = 0;
+            for (size_t l = 0; l < cov_keep.size(); l++) {
+                for (size_t k = 0; k < cov_keep.at(l).size(); k++) {
+                    ss = 0;
+                    pp = 0;
+                    fprintf(stdout, "|");
+                    for (size_t j = 0; j < cov_keep[l][k].size(); j++) {
+                        ss += cov_keep[l][k][j];
+                        pp++;
+                        fprintf(stdout, "%lu ", cov_keep[l][k][j]);
+                    }
+                    //fprintf(stdout, "%i - %lu|", pp, ss);
+                }
+                fprintf(stdout, "\n");
+            }
+            fprintf(stdout, "\n");
+            fprintf(stdout, "cov_change (single):\n");
+            for (size_t l = 0; l < cov_change.size(); l++) {
+                for (size_t k = 0; k < cov_change.at(l).size(); k++) {
+                    ss = 0;
+                    pp = 0;
+                    fprintf(stdout, "|");
+                    for (size_t j = 0; j < cov_change[l][k].size(); j++) {
+                        ss += cov_change[l][k][j];
+                        pp++;
+                        fprintf(stdout, "%lu ", cov_change[l][k][j]);
+                    }
+                    //fprintf(stdout, "%i - %lu|", pp, ss);
+                }
+                fprintf(stdout, "\n");
+            }
+            fprintf(stdout, "\n");
+
+            fprintf(stdout, "genome pos:\n");
+            for (size_t l = 0; l < genome_pos.size(); l++) {
+                for (size_t k = 0; k < genome_pos.at(l).size(); k++) {
+                    fprintf(stdout, "|");
+                    for (set<unsigned long>::iterator j = genome_pos.at(l).at(k).begin(); j != genome_pos.at(l).at(k).end(); j++)
+                        fprintf(stdout, "%lu ", *j);
+                }
+                fprintf(stdout, "\n");
+            }
+            fprintf(stdout, "\n");
+            
             fprintf(stdout, "cand loss: %f best loss: %f\n\n", candidate_loss, best_loss);
         }
     }
 
     if (conf->use_mip_objective && ! used_mip) {
         loss = -1.0;
+        gain = 0.0;
     } else {
         loss = min(candidate_loss, best_loss);
+        gain = max(best_loss - candidate_loss, 0.0);
     }
     return (candidate_loss < best_loss);
 }
@@ -553,8 +640,8 @@ void get_plifs_from_file() {
     fclose(infile);
 }
 
-double compute_mip_loss(double observed_cov, double predicted_cov, unsigned long segment_len) {
 
+double compute_mip_loss(double observed_cov, double predicted_cov, unsigned long segment_len) {
 
     // in the case of exonic segments, the observed coverage is a count value and the
     // predicted coverage is a mean that needs to be transfered into counts
@@ -588,6 +675,7 @@ double compute_mip_loss(double observed_cov, double predicted_cov, unsigned long
     return loss;
 }
 
+
 void prepare_mip_objective() {
 
         if (conf->segmentfile.size() == 0) {
@@ -610,6 +698,7 @@ void prepare_mip_objective() {
             if (conf->verbose) fprintf(stdout, "... done.\n\n");
         }
 }
+
 
 void add_zero_segments() {
     
@@ -736,11 +825,11 @@ void add_zero_segments() {
                 segment_counter++;
             }
         }
-
     }
     if (conf->verbose)
         fprintf(stdout, "... done.\n\n");
 }
+
 
 bool pair_is_valid(vector<Alignment>::iterator align1, vector<Alignment>::iterator align2) {
 
@@ -757,3 +846,66 @@ bool pair_is_valid(vector<Alignment>::iterator align1, vector<Alignment>::iterat
 }
 
 
+void parse_annotation() {
+
+    if (conf->verbose)
+        fprintf(stderr, "\nParsing segment boundaries from annotation file: %s\n", conf->annotation.c_str());
+
+    FILE* infile = fopen(conf->annotation.c_str(), "r");
+	if (!infile){
+		fprintf(stderr, "Could not open annotation file %s for reading!\n", conf->segmentfile.c_str());
+		exit(2);
+	}
+
+    char* ret;
+    char line[10000];
+
+    while (true) {
+        ret = fgets(line, sizeof(line), infile);
+
+        if (!ret)
+            break;
+
+        if (line[0] == '#')
+            continue;
+
+        char* sl = strtok(line, "\t");
+        int idx = 0;
+        unsigned int chr = 1;
+        char strand = '+';
+        long start = 0;
+        long stop = 0;
+        bool is_exon = false;
+
+        while (sl != NULL) {
+            if (idx == 0) { // contig
+                chr = genData->chr_num[string(sl)];
+                if (chr == 0) {
+                    fprintf(stderr, "\nERROR: The contig names in annotation file seem not to match the ones given in the alignment header. Could not find contig: %s\n", sl);
+                    exit(2);
+                }
+            } else if (idx == 2) { // is exon?
+                is_exon = strcmp("exon", sl) == 0;
+                if (!is_exon)
+                    break;
+            } else if (idx == 3) { // start 
+                start = atoi(sl) - 1;
+            } else if (idx == 4) { // stop
+                stop = atoi(sl);
+            } else if (idx == 6 && conf->strand_specific) { // strand
+                strand = *sl;
+            } else if (idx > 4) { // ignore rest
+                break;
+            }
+            sl = strtok(NULL, "\t");
+            idx++;
+        }
+
+        // only care about exonic segments
+        if (is_exon) {
+            pair<unsigned int, unsigned char> chr_strand = pair<unsigned int, unsigned char>(chr, strand);
+            genData->breakpoint_map[chr_strand].at(start) = true;
+            genData->breakpoint_map[chr_strand].at(stop) = true;
+        }
+    }
+}

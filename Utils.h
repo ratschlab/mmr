@@ -32,6 +32,7 @@
 #include <string>
 #include <cstdio>
 #include <vector>
+#include <deque>
 #include <set>
 #include <cmath>
 
@@ -51,7 +52,9 @@ void parse_cigar(string cigar, vector<char> &operations, vector<int> &sizes);
 
 double intron_penalty(vector<unsigned int> &intron_coverage);
 
-double get_variance(vector<vector<unsigned long> > &exon_coverage);
+double get_variance_global();
+
+double get_variance(vector<vector<vector<unsigned long> > > &exon_coverage, vector<vector<set<unsigned long> > > &genome_pos);
 
 vector<unsigned int> alter_coverage(vector<unsigned int> &source, unsigned int window_left, unsigned int window_right, bool is_positive);
 
@@ -63,9 +66,9 @@ void get_single_loss(vector<Alignment>::iterator candidate, double &loss, bool d
 
 void get_paired_loss(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, double &loss, bool debug = false);
 
-bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, vector<Alignment>::iterator best_left, vector<Alignment>::iterator best_right, double &loss, bool debug = false);
+bool compare_pair(vector<Alignment>::iterator candidate_left, vector<Alignment>::iterator candidate_right, vector<Alignment>::iterator best_left, vector<Alignment>::iterator best_right, double &loss, double &gain, bool debug = false);
 
-bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::iterator best, double &loss, bool debug = false);
+bool compare_single(vector<Alignment>::iterator candidate, vector<Alignment>::iterator best, double &loss, double &gain, bool debug = false);
 
 set<vector<Alignment>::iterator> filter_alignments(vector<Alignment> &aligns);
 
@@ -77,8 +80,10 @@ void prepare_mip_objective();
 
 void add_zero_segments();
 
-void compute_coverage_loss(vector<pair<vector<Alignment>::iterator,bool> > aligns, vector<vector<unsigned long> > &cov_keep, vector<vector<unsigned long> > &cov_change);
+void compute_coverage_loss(vector<pair<vector<Alignment>::iterator,bool> > aligns, vector<vector<vector<unsigned long> > > &cov_keep, vector<vector<vector<unsigned long> > > &cov_change, vector<vector<set<unsigned long> > > &genome_pos);
 
 bool pair_is_valid(vector<Alignment>::iterator first, vector<Alignment>::iterator second);
+
+void parse_annotation();
 
 #endif
