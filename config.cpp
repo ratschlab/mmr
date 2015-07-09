@@ -75,6 +75,9 @@ Config::Config(int argc, char *argv[]) {
             trim_id = (unsigned char) atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-w") || !strcmp(argv[i], "--windowsize")) {
             window_size = atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "-a") || !strcmp(argv[i], "--annotation")) {
+            annotation = std::string(argv[++i]);
+            use_brkpts = true;
         } else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--threads")) {
             num_threads = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-L") || !strcmp(argv[i], "--max-list-length")) {
@@ -94,6 +97,8 @@ Config::Config(int argc, char *argv[]) {
             samtools = std::string(argv[++i]);
         } else if (!strcmp(argv[i], "-z") || !strcmp(argv[i], "--zero-expect-unpred")) {
             zero_unpred = true;
+        } else if (!strcmp(argv[i], "-B") || !strcmp(argv[i], "--burn-in")) {
+            burn_in = true;
         } else if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "--segmentfile")) {
             segmentfile = std::string(argv[++i]);
         } else if (!strcmp(argv[i], "-l") || !strcmp(argv[i], "--lossfile")) {
@@ -132,6 +137,7 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-V --use-variants \tuse variant alignments for filtering (different edit op count,\n");
     fprintf(stderr, "\t\t\t\trequires XG and XM Tag in alignment files) [off]\n");
     fprintf(stderr, "\t-L --max-list-length [INT]\tmax length of alignment list per read (after filtering) [1000]\n");
+    fprintf(stderr, "\t-r --trim-id \t\ttrim this many positions from the end of each read ID [0]\n");
     // Paired Alignment options
     fprintf(stderr, "\n\tPaired alignment handling:\n");
     fprintf(stderr, "\t-p --pair-usage \tpre use pair information in the reads [off]\n");
@@ -145,6 +151,8 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\n\tOptions for using the variance optimization:\n");
     fprintf(stderr, "\t-w --windowsize  [INT]\tsize of coverage window around read [20]\n");
     fprintf(stderr, "\t-I --iterations  [INT]\tnumber of iterations to smooth the coverage [5]\n");
+    fprintf(stderr, "\t-a --annotation \tannotation file in GTF format to infer segment boundaries []\n");
+    fprintf(stderr, "\t-B --burn-in \t\tuse the first iteration to fill coverage map only [off]\n");
     // MIP Options
     fprintf(stderr, "\n\tOptions for using the MiTie objective for smoothing:\n");
     fprintf(stderr, "\t-m --mitie-objective \tuse objective from MiTie instead of local variance [off]\n");
@@ -178,9 +186,13 @@ void Config::print_call(std::string prog_name) {
         fprintf(stdout, "\t max pair list length: %i\n", max_pair_list_length);
 //        fprintf(stdout, "\t insert size std dev:  %.2f\n", insert_dev);
     }
-    fprintf(stdout, "\t trim read id by:      %i\n", trim_id);
+    if (trim_id > 0)
+        fprintf(stdout, "\t trim read id by:      %i\n", trim_id);
     fprintf(stdout, "\t print best only:      %s\n", print_best_only?"on":"off");
     fprintf(stdout, "\t iterations:           %i\n", iterations);
+    fprintf(stdout, "\t 1 iteration burn in:  %s\n", burn_in?"on":"off");
+    if (use_brkpts) 
+        fprintf(stdout, "\t annotation file:      %s\n", annotation.c_str()); 
     fprintf(stdout, "\t threads:              %i\n", num_threads);
     if (use_mip_variance || ! use_mip_objective) {
         fprintf(stdout, "\t window size:          %i\n", window_size);
@@ -204,6 +216,7 @@ void Config::init() {
     use_mip_objective = false;
     strand_specific = false;
     debug = false;
+    fast_mutex = true;
     window_size = 20;
     iterations = 5;
     filter_distance = 1;
@@ -218,9 +231,12 @@ void Config::init() {
     use_variants = false;
     use_mip_variance = false;
     segmentfile = string();
+    annotation = string();
     lossfile = string();
     read_len = 75;
     zero_unpred = false;
+    use_brkpts = false;
+    burn_in = false;
     samtools = "samtools";
     take_non_secondary_only = true;
 
