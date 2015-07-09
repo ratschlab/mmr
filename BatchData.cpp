@@ -303,24 +303,26 @@ double BatchData::get_total_min_loss() {
     for (unordered_map<string, vector<Alignment> >::iterator r_idx = this->read_map_left.begin(); r_idx != this->read_map_left.end(); r_idx++) {
         for (vector<Alignment>::iterator v_idx = r_idx->second.begin(); v_idx != r_idx->second.end(); v_idx++) {
             if (v_idx->is_best) {
-                vector<vector<unsigned long> > cov_keep;
-                vector<vector<unsigned long> > cov_change;
+                vector<vector<vector<unsigned long> > > cov_keep;
+                vector<vector<vector<unsigned long> > > cov_change;
+                vector<vector<set<unsigned long> > > genome_pos;
                 vector<pair<vector<Alignment>::iterator, bool> > aligns;
                 aligns.push_back( make_pair(v_idx, true) );
-                compute_coverage_loss(aligns, cov_keep, cov_change);
-                sum_min_loss += get_variance(cov_keep);
+                compute_coverage_loss(aligns, cov_keep, cov_change, genome_pos);
+                sum_min_loss += get_variance(cov_keep, genome_pos);
             }
         }
     }
     for (unordered_map<string, vector<Alignment> >::iterator r_idx = this->read_map_right.begin(); r_idx != this->read_map_right.end(); r_idx++) {
         for (vector<Alignment>::iterator v_idx = r_idx->second.begin(); v_idx != r_idx->second.end(); v_idx++) {
             if (v_idx->is_best) {
-                vector<vector<unsigned long>>  cov_keep;
-                vector<vector<unsigned long> > cov_change;
+                vector<vector<vector<unsigned long> > >  cov_keep;
+                vector<vector<vector<unsigned long> > > cov_change;
+                vector<vector<set<unsigned long> > > genome_pos;
                 vector<pair<vector<Alignment>::iterator, bool> > aligns;
                 aligns.push_back( make_pair(v_idx, true) );
-                compute_coverage_loss(aligns, cov_keep, cov_change);
-                sum_min_loss += get_variance(cov_keep);
+                compute_coverage_loss(aligns, cov_keep, cov_change, genome_pos);
+                sum_min_loss += get_variance(cov_keep, genome_pos);
             }
         }
     }
@@ -343,6 +345,7 @@ unsigned int BatchData::smooth_coverage_map_single_wrapper(list<unordered_map <s
         unsigned int num_changed = 0;
         unsigned int num_best = 0;
         double loss = 0.0;
+        double gain = 0.0;
 
         list<unordered_map<string, vector<Alignment> >::iterator>::iterator r_idx;
         for (r_idx = active_reads.begin(); r_idx != active_reads.end(); r_idx++) {
@@ -367,7 +370,7 @@ unsigned int BatchData::smooth_coverage_map_single_wrapper(list<unordered_map <s
                     continue;
 
                 // check if v_idx < curr_best
-                if (compare_single(v_idx, curr_best, loss)) {
+                if (compare_single(v_idx, curr_best, loss, gain)) {
                     changed = true;
                     curr_best->is_best = false;
                     curr_best->update_coverage_map(0);
@@ -392,6 +395,7 @@ unsigned int BatchData::smooth_coverage_map_paired(unsigned int &num_ambiguous) 
 
         unsigned int num_changed = 0;
         double loss = 0.0;
+        double gain = 0.0;
 
         unordered_map<string, vector<vector<Alignment>::iterator> >::iterator l_idx;
         unordered_map<string, vector<vector<Alignment>::iterator> >::iterator r_idx;
@@ -435,7 +439,7 @@ unsigned int BatchData::smooth_coverage_map_paired(unsigned int &num_ambiguous) 
             for(lv_idx = l_idx->second.begin(), rv_idx = r_idx->second.begin(); lv_idx < l_idx->second.end() && rv_idx  < r_idx->second.end(); lv_idx++, rv_idx++) {
                 if ((*lv_idx)  == best_left_idx && (*rv_idx) == best_right_idx)
                     continue;
-                if (compare_pair(*lv_idx, *rv_idx, best_left_idx, best_right_idx, loss)) {
+                if (compare_pair(*lv_idx, *rv_idx, best_left_idx, best_right_idx, loss, gain)) {
                     changed = true;
                     best_left_idx->is_best = false;
                     best_right_idx->is_best = false;

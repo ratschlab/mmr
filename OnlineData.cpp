@@ -62,16 +62,23 @@ void OnlineData::process_data_online(GeneralData* genData) {
 
     unsigned int num_changed = 0;
     unsigned int num_tested = 0;
-    double min_loss = numeric_limits<double>::max();
-    double total_min_loss = 0.0;
     double loss = 0.0;
+    double gain = 0.0;
+    double total_gain = 0.0;
     bool found_pairs = false;
 
     if (conf->pre_filter) {
         ignore_idx_left = filter_alignments(this->left_reads);
         pthread_mutex_lock(&mutex_best_left);
+            
         if (ignore_idx_left.find(this->left_reads.begin() + genData->best_left[this->last_id]) != ignore_idx_left.end()) {
             vector<Alignment>::iterator curr_align = (this->left_reads.begin() + genData->best_left[this->last_id]);
+            if (!curr_align->is_best) {
+                curr_align->print();
+                for (vector<Alignment>::iterator it = this->left_reads.begin(); it != this->left_reads.end(); it++)
+                    it->print();
+            }
+            assert(curr_align->is_best);
             curr_align->is_best = false;
             curr_align->update_coverage_map(0);
             for (vector<Alignment>::iterator v_idx = this->left_reads.begin(); v_idx != this->left_reads.end(); v_idx++) {
@@ -87,8 +94,15 @@ void OnlineData::process_data_online(GeneralData* genData) {
 
         ignore_idx_right = filter_alignments(this->right_reads);
         pthread_mutex_lock(&mutex_best_right);
+
         if (ignore_idx_right.find(this->right_reads.begin() + genData->best_right[this->last_id]) != ignore_idx_right.end()) {
             vector<Alignment>::iterator curr_align = (this->right_reads.begin() + genData->best_right[this->last_id]);
+            if (!curr_align->is_best) {
+                curr_align->print();
+                for (vector<Alignment>::iterator it = this->right_reads.begin(); it != this->right_reads.end(); it++)
+                    it->print();
+            }
+            assert(curr_align->is_best);
             curr_align->is_best = false;
             curr_align->update_coverage_map(0);
             for (vector<Alignment>::iterator v_idx = this->right_reads.begin(); v_idx != this->right_reads.end(); v_idx++) {
@@ -107,7 +121,7 @@ void OnlineData::process_data_online(GeneralData* genData) {
     // the maximum allowed number of mappings per reads, ignore 
     // the read - the first alignment will be the best
     // TODO Take alignment with best quality !!!
-    if (this->left_reads.size() > conf->max_list_length || this->right_reads.size() > conf->max_list_length) {
+    if (this->left_reads.size() > conf->max_list_length || this->right_reads.size() > conf->max_list_length || (conf->burn_in && conf->iteration == 0)) {
         delete this;
         return;
     }
@@ -129,18 +143,22 @@ void OnlineData::process_data_online(GeneralData* genData) {
         bool changed = false;
         for(lv_idx = active_left_reads.begin(), rv_idx = active_right_reads.begin(); lv_idx != active_left_reads.end() && rv_idx != active_right_reads.end(); lv_idx++, rv_idx++) {
             if ((*lv_idx) == best_left_idx && (*rv_idx) == best_right_idx) {
-                get_paired_loss(*lv_idx, *rv_idx, loss); 
-                if (loss >= 0.0)
-                    min_loss = min(min_loss, loss);
                 continue;
-            }
-            if (compare_pair(*lv_idx, *rv_idx, best_left_idx, best_right_idx, loss)) {
+            }  
+            if (!conf->fast_mutex)
+                pthread_mutex_lock(&mutex_coverage);
+            if (compare_pair(*lv_idx, *rv_idx, best_left_idx, best_right_idx, loss, gain)) {
+
+                total_gain += gain;
+                //fprintf(stdout, "gain: %f\n", gain);
 
                 changed = true;
 
                 vector<Alignment>::iterator old_best_left = best_left_idx;
                 vector<Alignment>::iterator old_best_right = best_right_idx;
 
+                //fprintf(stdout, "total objective (before): %f\n", (float) get_variance_global());
+                
                 best_left_idx->is_best = false;
                 best_right_idx->is_best = false;
                 best_left_idx->update_coverage_map(0);
@@ -151,6 +169,8 @@ void OnlineData::process_data_online(GeneralData* genData) {
                 best_right_idx->is_best = true;
                 best_left_idx->update_coverage_map(1);
                 best_right_idx->update_coverage_map(1);
+
+                //fprintf(stdout, "total objective (after): %f\n", (float) get_variance_global());
                 
                 // START DEBUG
                 if (debug && conf->iteration > 0) {
@@ -167,7 +187,7 @@ void OnlineData::process_data_online(GeneralData* genData) {
                         best_right_idx->is_best = true;
                         best_left_idx->update_coverage_map(1);
                         best_right_idx->update_coverage_map(1);
-                        compare_pair(*lv_idx, *rv_idx, best_left_idx, best_right_idx, loss, true);
+                        compare_pair(*lv_idx, *rv_idx, best_left_idx, best_right_idx, loss, gain, true);
                         fprintf(stdout, "loss so far: %f\n", conf->last_loss);
                         fprintf(stdout, "loss now: %f\n\n", new_total_loss);
                         // roll-roll-back
@@ -193,15 +213,15 @@ void OnlineData::process_data_online(GeneralData* genData) {
                 genData->best_right[this->last_id] = (best_right_idx - this->right_reads.begin()); 
                 pthread_mutex_unlock(&mutex_best_right);
             }
-            if (loss >= 0.0)
-                min_loss = min(min_loss, loss);
+            if (!conf->fast_mutex)
+                pthread_mutex_unlock(&mutex_coverage);
         }
-        total_min_loss += (min_loss < numeric_limits<double>::max()) ? min_loss : 0;
         num_tested++;
         if (changed) 
             num_changed++;
 
     } else {
+        // work on left read of paired alignments mapped as singles
         bool best_found = false;
         for (lv_idx = active_left_reads.begin(); lv_idx != active_left_reads.end(); lv_idx++) {
             if ((*lv_idx)->is_best) {
@@ -217,22 +237,35 @@ void OnlineData::process_data_online(GeneralData* genData) {
         }
         bool changed = false;
         for (lv_idx = active_left_reads.begin(); lv_idx != active_left_reads.end(); lv_idx++) {
+            //fprintf(stdout, "aln %lu\n", (*lv_idx)->start);
             if (*lv_idx == *curr_best) {
-                get_single_loss(*lv_idx, loss); 
-                if (loss >= 0.0)
-                    min_loss = min(min_loss, loss);
                 continue;
             }
 
             vector<Alignment>::iterator old_best = *curr_best;
+            if (!conf->fast_mutex)
+                pthread_mutex_lock(&mutex_coverage);
             // check if lv_idx < curr_best
-            if (compare_single(*lv_idx, *curr_best, loss)) {
+            if (compare_single(*lv_idx, *curr_best, loss, gain)) { //, (this->last_id).compare(string("1_270569_270618")) == 0)) {
+                total_gain += gain;
+                //double obj_bef = get_variance_global();
+                //fprintf(stdout, "is left\ntotal objective (before): %f\n", obj_bef);
                 changed = true;
                 (*curr_best)->is_best = false;
                 (*curr_best)->update_coverage_map(0);
+                //fprintf(stdout, "\n");
                 *curr_best = *lv_idx;          
                 (*curr_best)->is_best = true;
                 (*curr_best)->update_coverage_map(1);
+                //fprintf(stdout, "\n");
+                //double obj_aft = get_variance_global();
+                //fprintf(stdout, "total objective (after): %f\n", obj_aft);
+                //(*lv_idx)->print();
+                //fprintf(stdout, "delta obj: %f\n", obj_bef - obj_aft);
+                //fprintf(stdout, "gain: %f\n\n", gain);
+                //if (abs((obj_bef - obj_aft) - gain) > 10e-5)
+                //    assert(false);
+                //fprintf(stdout, "new best at %lu\n", (*curr_best)->start);
                 // START DEBUG
                 if (debug && conf->iteration > 0) {
                     double new_total_loss = genData->segments.get_total_loss();
@@ -248,7 +281,7 @@ void OnlineData::process_data_online(GeneralData* genData) {
                         (*curr_best)->update_coverage_map(1);
                         (*lv_idx)->print();
                         (*curr_best)->print();
-                        compare_single(*lv_idx, *curr_best, loss, true);
+                        compare_single(*lv_idx, *curr_best, loss, gain, true);
                         fprintf(stdout, "left single:\n");
                         fprintf(stdout, "loss so far: %f\n", conf->last_loss);
                         fprintf(stdout, "loss now: %f\n\n", new_total_loss);
@@ -268,14 +301,14 @@ void OnlineData::process_data_online(GeneralData* genData) {
                 pthread_mutex_unlock(&mutex_best_left);
 
             }
-            if (loss >= 0.0)
-                min_loss = min(min_loss, loss);
+            if (!conf->fast_mutex)
+                pthread_mutex_unlock(&mutex_coverage);
         }
-        total_min_loss += (min_loss < numeric_limits<double>::max()) ? min_loss : 0;
-        num_tested++;
-        if (changed) 
+        
+        if (changed)
             num_changed++;
 
+        // work on right read of paired alignments mapped as singles
         best_found = false;
         for (rv_idx = active_right_reads.begin(); rv_idx != active_right_reads.end(); rv_idx++) {
             if ((*rv_idx)->is_best) {
@@ -290,20 +323,34 @@ void OnlineData::process_data_online(GeneralData* genData) {
             assert(best_found);
         }
         changed = false;
-        min_loss = numeric_limits<double>::max();
         for (rv_idx = active_right_reads.begin(); rv_idx != active_right_reads.end(); rv_idx++) {
-            if (*rv_idx == *curr_best)
+            //fprintf(stdout, "aln %lu\n", (*rv_idx)->start);
+            if (*rv_idx == *curr_best) {
                 continue;
+            }
             
             vector<Alignment>::iterator old_best = *curr_best;
+            if (!conf->fast_mutex)
+                pthread_mutex_lock(&mutex_coverage);
             // check if rv_idx < curr_best
-            if (compare_single(*rv_idx, *curr_best, loss)) {
+            if (compare_single(*rv_idx, *curr_best, loss, gain)) { //, (this->last_id).compare(string("1_270569_270618")))) {
+                total_gain += gain;
+                //double obj_bef = get_variance_global();
+                //fprintf(stdout, "is right\ntotal objective (before): %f\n", obj_bef);
                 changed = true;
                 (*curr_best)->is_best = false;
                 (*curr_best)->update_coverage_map(0);
                 *curr_best = *rv_idx;          
                 (*curr_best)->is_best = true;
                 (*curr_best)->update_coverage_map(1);
+                //double obj_aft = get_variance_global();
+                //fprintf(stdout, "total objective (after): %f\n", obj_aft);
+                //(*rv_idx)->print();
+                //fprintf(stdout, "delta obj: %f\n", obj_bef - obj_aft);
+                //fprintf(stdout, "gain: %f\n\n", gain);
+                //if (abs((obj_bef - obj_aft) - gain) > 10e-5)
+                //    assert(false);
+                //fprintf(stdout, "new best at %lu\n", (*curr_best)->start);
                 // START DEBUG
                 if (debug && conf->iteration > 0) {
                     double new_total_loss = genData->segments.get_total_loss();
@@ -316,7 +363,7 @@ void OnlineData::process_data_online(GeneralData* genData) {
                         (*curr_best) = old_best;
                         (*curr_best)->is_best = true;
                         (*curr_best)->update_coverage_map(1);
-                        compare_single(*rv_idx, *curr_best, loss, true);
+                        compare_single(*rv_idx, *curr_best, loss, gain, true);
                         fprintf(stdout, "right single:\n");
                         fprintf(stdout, "loss so far: %f\n", conf->last_loss);
                         fprintf(stdout, "loss now: %f\n\n", new_total_loss);
@@ -335,17 +382,16 @@ void OnlineData::process_data_online(GeneralData* genData) {
                 genData->best_right[this->last_id] = (*curr_best - this->right_reads.begin()); 
                 pthread_mutex_unlock(&mutex_best_right);
             }
-            if (loss >= 0.0)
-                min_loss = min(min_loss, loss);
+            if (!conf->fast_mutex)
+                pthread_mutex_unlock(&mutex_coverage);
         }
-        total_min_loss += (min_loss < numeric_limits<double>::max()) ? min_loss : 0;
         num_tested++;
-        if (changed) 
+        if (changed)
             num_changed++;
 
     }
     pthread_mutex_lock(&mutex_counter);
-    genData->total_loss += total_min_loss;
+    genData->total_gain += total_gain;
     genData->num_altered += num_changed;
     genData->num_tested += num_tested;
     pthread_mutex_unlock(&mutex_counter);
@@ -517,7 +563,7 @@ char* OnlineData::parse_file(FILE* infile, char* last_line, GeneralData* genData
                         this->left_reads.at(b_idx->second).update_coverage_map(0);
                         curr_alignment.is_best = true;
                         curr_alignment.update_coverage_map(1);
-                        b_idx->second = this->left_reads.size();
+                        curr_alignment.update_coverage_map(1);
                     }
                 }
                 pthread_mutex_unlock(&mutex_best_left);
