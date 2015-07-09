@@ -64,11 +64,9 @@ public:
 
     string fill(char* sl, unsigned char &pair, bool &unmapped);
 
-    void fill_coverage_vectors(vector<unsigned long> &cov_keep, vector<unsigned long> &cov_change, set<unsigned int> &genome_pos, unsigned long first_start, bool is_curr_best);
+    void fill_coverage_vector(vector<vector<unsigned long> > &cov_keep);
 
-    void fill_coverage_vector(vector<unsigned long> &cov_keep);
-
-    void alter_coverage_vector(vector<vector<unsigned long> > &cov_change, vector<set<unsigned long> > &genome_pos, bool is_curr_best);
+    void alter_coverage_vector(vector<vector<vector<unsigned long> > > &cov_change, vector<vector<set<unsigned long> > > &genome_pos, bool is_curr_best);
 
     void update_coverage_map(bool positive);
 
@@ -84,7 +82,9 @@ public:
 
     set<unsigned long> get_overlap(Alignment &other);
 
-    set<unsigned long> get_genome_pos(unsigned int window_size = 0);
+    vector<set<unsigned long> > get_genome_pos(unsigned int window_size = 0);
+
+    set<unsigned long> get_exon_pos(unsigned int window_size = 0);
 
     unsigned int get_length();
 

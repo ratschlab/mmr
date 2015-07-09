@@ -55,7 +55,7 @@ string Alignment::fill(char* sl, unsigned char &pair, bool &unmapped) {
         if (idx == 0) { 
             id = sl;
             if (conf->trim_id > 0)
-                id = id.substr(0, id.size() - 2);
+                id = id.substr(0, id.size() - conf->trim_id);
         } else if (idx == 1) {
             pair = (atoi(sl) & 128);
             this->reversed = ((atoi(sl) & 16) == 16);
@@ -98,263 +98,214 @@ string Alignment::fill(char* sl, unsigned char &pair, bool &unmapped) {
     return id;
 }
 
-void Alignment::fill_coverage_vector(vector<unsigned long> &cov_keep) {
+void Alignment::fill_coverage_vector(vector<vector<unsigned long> > &cov_keep) {
 
-    vector<unsigned int>::iterator cov_idx = genData->coverage_map[ make_pair(this->chr, this->strand) ].begin();
+    pair<unsigned int, unsigned char> chr_strand = make_pair(this->chr, this->strand);
+    vector<unsigned int>::iterator cov_idx = genData->coverage_map[ chr_strand ].begin();
+    vector<bool>::iterator brk_idx = genData->breakpoint_map[ chr_strand ].begin();
+
     size_t chrm_pos = 0;
     if (conf->window_size < this->start) {
         advance(cov_idx, this->start - conf->window_size);
+        advance(brk_idx, this->start - conf->window_size);
         chrm_pos = (this->start - conf->window_size);
     }
-//    size_t curr_pos = distance(genome_pos.begin(), genome_pos.find(chrm_pos + genData->chr_size_cum.at(this->chr - 1)));
     unsigned int offset = (conf->window_size >= this->start)?this->start:conf->window_size;
 
     // lock coverage map
-    pthread_mutex_lock(&mutex_coverage);
+    if (conf->fast_mutex)
+        pthread_mutex_lock(&mutex_coverage);
 
     if (conf->debug) {
         this->print();
         fprintf(stderr, "cov keep before fill:\n");
-        for (vector<unsigned long>::iterator u = cov_keep.begin(); u != cov_keep.end(); u++) {
-            fprintf(stderr, "%2lu ", *u);
+        for (vector<vector<unsigned long> >::iterator u = cov_keep.begin(); u != cov_keep.end(); u++) {
+            for (vector<unsigned long>::iterator v = u->begin(); v != u->end(); v++) {
+                fprintf(stderr, "%2lu ", *v);
+            }
         }
         fprintf(stderr, "\n");
     }
 
+
     // get coverage from preceding windows
+    vector<unsigned long> curr_cov_segment;
     for (size_t i = 0; i < offset; i++) {
-        if (cov_idx < genData->coverage_map[ make_pair(this->chr, this->strand) ].end()) {
-            cov_keep.push_back(*cov_idx);
+        if (cov_idx < genData->coverage_map[ chr_strand ].end()) {
+            curr_cov_segment.push_back(*cov_idx);
             cov_idx++;
             chrm_pos++;
+            brk_idx++;
+            if (conf->use_brkpts && brk_idx != genData->breakpoint_map[ chr_strand ].end() && *brk_idx) {
+                curr_cov_segment.clear();
+            }
         } else {
             break;
         }
     }
-    pthread_mutex_unlock(&mutex_coverage);
+    if (conf->fast_mutex)
+        pthread_mutex_unlock(&mutex_coverage);
 
     // get coverage from alignment exons
     for (size_t i = 0; i < this->sizes.size(); i++) {
         switch (this->operations.at(i)) {
-            case 'M': case 'D': {   //curr_pos = distance(genome_pos.begin(), genome_pos.find(chrm_pos + genData->chr_size_cum.at(this->chr - 1)));
-                                    pthread_mutex_lock(&mutex_coverage);
-                                    for (int j = 0; j < this->sizes.at(i); j++) {
-                                        if (cov_idx < genData->coverage_map[ make_pair(this->chr, this->strand) ].end()) {
-                                            cov_keep.push_back(*cov_idx);
-                                            cov_idx++;
-                                            chrm_pos++;
+            case 'M': case 'D': case 'N': {   //curr_pos = distance(genome_pos.begin(), genome_pos.find(chrm_pos + genData->chr_size_cum.at(this->chr - 1)));
+                                    if (conf->fast_mutex)
+                                        pthread_mutex_lock(&mutex_coverage);
+                                    if (this->operations.at(i) == 'N' && this->sizes.at(i) > (2 * (int) conf->window_size)) {
+                                        size_t pos2brkpt = 0;
+                                        for (size_t j = 0; j < conf->window_size; j++) {
+                                            if (cov_idx < genData->coverage_map[ chr_strand ].end()) {
+                                                curr_cov_segment.push_back(*cov_idx);
+                                                cov_idx++;
+                                                chrm_pos++;
+                                                brk_idx++;
+                                                pos2brkpt++;
+                                                if (conf->use_brkpts && brk_idx != genData->breakpoint_map[ chr_strand ].end() && *brk_idx) {
+                                                    cov_keep.push_back(curr_cov_segment);
+                                                    curr_cov_segment.clear();
+                                                    break;
+                                                }
+                                            }
                                         }
-                                    }; 
-                                    pthread_mutex_unlock(&mutex_coverage);
+                                        cov_idx += (this->sizes.at(i) - conf->window_size - pos2brkpt);
+                                        brk_idx += (this->sizes.at(i) - conf->window_size - pos2brkpt);
+                                        chrm_pos += (this->sizes.at(i) - conf->window_size - pos2brkpt);
+                                        if (curr_cov_segment.size() > 0) {
+                                            cov_keep.push_back(curr_cov_segment);
+                                            curr_cov_segment.clear();
+                                        }
+                                        for (size_t j = 0; j < conf->window_size; j++) {
+                                            if (cov_idx < genData->coverage_map[ chr_strand ].end()) {
+                                                curr_cov_segment.push_back(*cov_idx);
+                                                cov_idx++;
+                                                brk_idx++;
+                                                chrm_pos++;
+                                                if (conf->use_brkpts && brk_idx != genData->breakpoint_map[ chr_strand ].end() && *brk_idx) {
+                                                    curr_cov_segment.clear();
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        for (int j = 0; j < this->sizes.at(i); j++) {
+                                            if (cov_idx < genData->coverage_map[ chr_strand ].end()) {
+                                                curr_cov_segment.push_back(*cov_idx);
+                                                cov_idx++;
+                                                brk_idx++;
+                                                chrm_pos++;
+                                                if (conf->use_brkpts && brk_idx != genData->breakpoint_map[ chr_strand ].end() && *brk_idx) {
+                                                    cov_keep.push_back(curr_cov_segment);
+                                                    curr_cov_segment.clear();
+                                                }
+                                            }
+                                        }
+                                    };
+                                    if (conf->fast_mutex)
+                                        pthread_mutex_unlock(&mutex_coverage);
                                     break;
                                 }
-            case 'N': { cov_idx += this->sizes.at(i);
-                        chrm_pos += this->sizes.at(i);
-                        break;
-                      }
         }
     }
 
     // get coverage from following windows
-    pthread_mutex_lock(&mutex_coverage);
+    if (conf->fast_mutex)
+        pthread_mutex_lock(&mutex_coverage);
     for (size_t i = 0; i < conf->window_size; i++) {
-        if (cov_idx < genData->coverage_map[ make_pair(this->chr, this->strand) ].end()) {
-            cov_keep.push_back(*cov_idx);
+        if (cov_idx < genData->coverage_map[ chr_strand ].end()) {
+            curr_cov_segment.push_back(*cov_idx);
             cov_idx++;
+            brk_idx++;
+            //if (conf->use_brkpts && cov_idx < genData->coverage_map[ chr_strand ].end() && genData->breakpoint_map[ chr_strand ].at(distance(cov_beg, cov_idx))) {
+            if (conf->use_brkpts && brk_idx != genData->breakpoint_map[ chr_strand ].end() && *brk_idx) {
+                cov_keep.push_back(curr_cov_segment);
+                curr_cov_segment.clear();
+                break;
+            }
         }
         else {
             break;
         }
     }
 
+    if (curr_cov_segment.size() > 0)
+        cov_keep.push_back(curr_cov_segment);
+
     if (conf->debug) {
         fprintf(stderr, "cov keep after fill:\n");
-        for (vector<unsigned long>::iterator u = cov_keep.begin(); u != cov_keep.end(); u++) {
-            fprintf(stderr, "%2lu ", *u);
+        for (vector<vector<unsigned long> >::iterator v = cov_keep.begin(); v != cov_keep.end(); v++) {
+            for (vector<unsigned long>::iterator u = v->begin(); u != v->end(); u++) {
+                fprintf(stderr, "%2lu ", *u);
+            }
         }
         fprintf(stderr, "\n");
     }
 
     // unlock coverage map
-    pthread_mutex_unlock(&mutex_coverage);
+    if (conf->fast_mutex)
+        pthread_mutex_unlock(&mutex_coverage);
 }
 
-void Alignment::alter_coverage_vector(vector<vector<unsigned long> > &cov_change, vector<set<unsigned long> > &genome_pos, bool is_curr_best) {
+void Alignment::alter_coverage_vector(vector<vector<vector<unsigned long> > > &cov_change, vector<vector<set<unsigned long> > > &genome_pos, bool is_curr_best) {
 
     // alter coverage iteratively in all coverage vectors
     for (size_t a = 0; a < cov_change.size(); a++) {
+        // iterate over all segments of each coverage vector (e.g., caused by cut introns)
+        for (size_t b = 0; b < cov_change.at(a).size(); b++) {
 
-        if (conf->debug) {
-            this->print();
-            fprintf(stderr, "Cov before change:\n");
-            for (vector<unsigned long>::iterator u = cov_change.at(a).begin(); u != cov_change.at(a).end(); u++) {
-                fprintf(stderr, "%2lu ", *u);
+            if (conf->debug) {
+                this->print();
+                fprintf(stderr, "Cov before change:\n");
+                for (vector<unsigned long>::iterator u = cov_change.at(a).at(b).begin(); u != cov_change.at(a).at(b).end(); u++) {
+                    fprintf(stderr, "%2lu ", *u);
+                }
+                fprintf(stderr, "\n");
+                for (set<unsigned long>::iterator v = genome_pos.at(a).at(b).begin(); v != genome_pos.at(a).at(b).end(); v++) {
+                    fprintf(stderr, "%2lu ", *v);
+                }
+                fprintf(stderr, "\n");
             }
-            fprintf(stderr, "\n");
-            for (set<unsigned long>::iterator v = genome_pos.at(a).begin(); v != genome_pos.at(a).end(); v++) {
-                fprintf(stderr, "%2lu ", *v);
-            }
-            fprintf(stderr, "\n");
-        }
 
-        // alter coverage where necessary
-        set<unsigned long>::iterator gp;
-        unsigned long chrm_pos = this->start;
-        size_t curr_pos;
+            // alter coverage where necessary
+            set<unsigned long>::iterator gp;
+            unsigned long chrm_pos = this->start;
+            size_t curr_pos;
 
-        for (size_t i = 0; i < this->sizes.size(); i++) {
-            switch (this->operations.at(i)) {
-                case 'M': case 'D': {   for (int j = 0; j < this->sizes.at(i); j++) {
-                                            gp = genome_pos.at(a).find(chrm_pos + genData->chr_size_cum.at(this->chr - 1));
-                                            if (gp != genome_pos.at(a).end()) {
-                                                curr_pos = distance(genome_pos.at(a).begin(), gp);
-                                                if (this->is_best && is_curr_best) {
-                                                    cov_change.at(a).at(curr_pos++) -= 1;
-                                                } else{
-                                                    cov_change.at(a).at(curr_pos++) += 1;
+            for (size_t i = 0; i < this->sizes.size(); i++) {
+                switch (this->operations.at(i)) {
+                    case 'M': case 'D': {   for (int j = 0; j < this->sizes.at(i); j++) {
+                                                gp = genome_pos.at(a).at(b).find(chrm_pos + genData->chr_size_cum.at(this->chr - 1));
+                                                if (gp != genome_pos.at(a).at(b).end()) {
+                                                    curr_pos = distance(genome_pos.at(a).at(b).begin(), gp);
+                                                    if (this->is_best && is_curr_best) {
+                                                        cov_change.at(a).at(b).at(curr_pos++) -= 1;
+                                                    } else{
+                                                        cov_change.at(a).at(b).at(curr_pos++) += 1;
+                                                    }
                                                 }
-                                            }
-                                            chrm_pos++;
-                                        }; 
-                                        break;
-                                    }
-                case 'N': { chrm_pos += this->sizes.at(i);
-                            break;
-                          }
-            }
-        }
-
-        if (conf->debug) {
-            fprintf(stderr, "Cov after change:\n");
-            for (vector<unsigned long>::iterator u = cov_change.at(a).begin(); u != cov_change.at(a).end(); u++) {
-                fprintf(stderr, "%2li ", *u);
-            }
-            fprintf(stderr, "\n");
-        }
-    }
-}
-
-//void Alignment::fill_coverage_vectors(vector<unsigned long> &cov_keep, vector<unsigned long> &cov_change, vector<bool> &intronic, unsigned long first_start, bool is_curr_best) {
-void Alignment::fill_coverage_vectors(vector<unsigned long> &cov_keep, vector<unsigned long> &cov_change, set<unsigned int> &genome_pos, unsigned long first_start, bool is_curr_best) {
-
-    // cov_keep -> coverage, if we keep the current best assignment
-    // cov_change -> coverage, if we change the current best assignment
-
-    vector<unsigned int>::iterator cov_idx = genData->coverage_map[ make_pair(this->chr, this->strand) ].begin();
-
-    unsigned int offset = (conf->window_size >= this->start)?this->start:conf->window_size;
-    // position in global coverage coordinates (for all chromosomes)
-    size_t curr_pos = distance(genome_pos.begin(), genome_pos.find(this->start + genData->chr_size_cum.at(this->chr - 1)));
-
-    // set start coordinates
-    if (conf->window_size < this->start) { 
-        //fprintf(stdout, "this start: %lu\n", this->start);
-        //fprintf(stdout, "window %i\n", conf->window_size);
-        //fprintf(stdout, "diff %lu\n", this->start - conf->window_size);
-        advance(cov_idx, this->start - conf->window_size);
-        //curr_pos += (this->start - conf->window_size - first_start);
-        //fprintf(stdout, "first start %lu\n", first_start);
-        //fprintf(stdout, "curr_pos %lu\n", curr_pos);
-    }
-
-    // lock coverage map
-    pthread_mutex_lock(&mutex_coverage);
-    //fprintf(stdout, "Coverage:\n");
-    //for (vector<unsigned int>::iterator tt = genData->coverage_map[ make_pair(this->chr, this->strand) ].begin(); tt != genData->coverage_map[ make_pair(this->chr, this->strand) ].end(); tt++) {
-    //    fprintf(stdout, "%u ", *tt);
-    //}
-    //fprintf(stdout, "\n\n");
-
-    // get coverage from preceding windows
-    for (size_t i = 0; i < offset; i++) {
-        if (cov_idx < genData->coverage_map[ make_pair(this->chr, this->strand) ].end()) {
-
-            assert(cov_keep.size() == cov_change.size());
-
-            if (curr_pos >= cov_keep.size()) {
-                //fprintf(stdout, "curr pos: %i\n", curr_pos);
-                cov_keep.push_back(*cov_idx);
-                cov_change.push_back(*cov_idx);
-            }
-            cov_idx++;
-            curr_pos++;
-        } else {
-            break;
-        }
-    }
-
-    // get coverage from alignments
-    for (size_t i = 0; i < this->sizes.size(); i++) {
-        switch (this->operations.at(i)) {
-            case 'M': case 'D': { for (int j = 0; j < this->sizes.at(i); j++) {
-                                    if (cov_idx < genData->coverage_map[ make_pair(this->chr, this->strand) ].end()) {
-                                        if (this->is_best && is_curr_best) {
-                                            if (curr_pos < cov_change.size()) {
-                                                //fprintf(stdout, "changed %lu to %lu\n", cov_change.at(curr_pos), cov_change.at(curr_pos) - 1);
-                                                cov_change.at(curr_pos) -= 1;
-                                            } else {
-                                                assert(*cov_idx > 0);
-                                                cov_change.push_back((*cov_idx) - 1);
-                                                cov_keep.push_back(*cov_idx);
-                                            }
-                                        } else{
-                                            if (curr_pos < cov_change.size()) {
-                                                cov_change.at(curr_pos) += 1;
-                                            } else {
-                                                cov_change.push_back((*cov_idx) + 1);
-                                                cov_keep.push_back(*cov_idx);
-                                            }
+                                                chrm_pos++;
+                                            }; 
+                                            break;
                                         }
-                                        //fprintf(stdout, "curr pos: %i\n", curr_pos);
-                                        cov_idx++;
-                                        curr_pos++;
-                                     }
-                                  }; 
-                                  break;
-                                }
-            case 'N': { cov_idx += this->sizes.at(i);
-                        break;
-                      }
-        }
-    }
-
-    // get coverage from following windows
-    for (size_t i = 0; i < conf->window_size; i++) {
-        if (cov_idx < genData->coverage_map[ make_pair(this->chr, this->strand) ].end()) {
-
-            assert(cov_keep.size() == cov_change.size());
-
-            if (curr_pos >= cov_change.size()) {
-                cov_change.push_back(*cov_idx);
-                cov_keep.push_back(*cov_idx);
-                //fprintf(stdout, "curr pos: %i\n", curr_pos);
+                    case 'N': { chrm_pos += this->sizes.at(i);
+                                break;
+                              }
+                }
             }
-            cov_idx++;
-            curr_pos++;
-        }
-        else {
-            break;
-        }
-    }
-    // unlock coverage map
-    pthread_mutex_unlock(&mutex_coverage);
 
-    /*fprintf(stdout, "keep:\n");
-    for (size_t uu = 0; uu < cov_keep.size(); uu++) {
-        fprintf(stdout, "%lu ", cov_keep.at(uu));
+            if (conf->debug) {
+                fprintf(stderr, "Cov after change:\n");
+                for (vector<unsigned long>::iterator u = cov_change.at(a).at(b).begin(); u != cov_change.at(a).at(b).end(); u++) {
+                    fprintf(stderr, "%2li ", *u);
+                }
+                fprintf(stderr, "\n");
+            }
+        }
     }
-    fprintf(stdout, "\n");
-    fprintf(stdout, "change:\n");
-    for (size_t uu = 0; uu < cov_change.size(); uu++) {
-        fprintf(stdout, "%lu ", cov_change.at(uu));
-    }
-    fprintf(stdout, "\n\n");
-    */
 }
+
 
 void Alignment::update_coverage_map(bool positive) {
 
-    //pthread_mutex_lock(&mutex_coverage);
     vector<unsigned int>::iterator idx = genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].begin() + this->start;
     unsigned long pos = this->start;
 
@@ -362,9 +313,11 @@ void Alignment::update_coverage_map(bool positive) {
         switch (this->operations.at(i)) {
             case 'M': case 'D': for (int j = 0; j < this->sizes.at(i); j++) {
                                     if (idx < genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].end()) {
-                                        pthread_mutex_lock(&mutex_coverage);
+                                        if (conf->fast_mutex)
+                                            pthread_mutex_lock(&mutex_coverage);
                                         *idx += (*idx > 0 || positive) ? (2*positive - 1) : 0; 
-                                        pthread_mutex_unlock(&mutex_coverage);
+                                        if (conf->fast_mutex)
+                                            pthread_mutex_unlock(&mutex_coverage);
                                         idx++;
                                         pos++;
                                     }
@@ -389,8 +342,6 @@ void Alignment::update_coverage_map(bool positive) {
         if (idx >= genData->coverage_map[pair<unsigned char, unsigned char>(this->chr, this->strand)].end())
             break;
     }
-
-    //pthread_mutex_unlock(&mutex_coverage);
 }
 
 unsigned long Alignment::get_end() {
@@ -411,13 +362,6 @@ bool Alignment::compare_edit_ops(const Alignment &left, const Alignment &right) 
 }
 
 bool Alignment::is_spliced() {
-/*    bool spliced = false;
-    for (vector<char>::iterator it = this->operations.begin(); it != this->operations.end(); it++) {
-        if ((*it) == 'N') {
-            spliced = true;
-            break;
-        }
-    }*/
     return find(this->operations.begin(), this->operations.end(), 'N') != this->operations.end();
 }
 
@@ -485,7 +429,8 @@ set<unsigned long> Alignment::get_overlap(Alignment &other) {
     return overlap;
 }
 
-set<unsigned long> Alignment::get_genome_pos(unsigned int window_size) {
+
+set<unsigned long> Alignment::get_exon_pos(unsigned int window_size) {
 
     set<unsigned long> position_set;
 
@@ -521,6 +466,84 @@ set<unsigned long> Alignment::get_genome_pos(unsigned int window_size) {
     }
 
     return position_set;
+}
+
+
+vector<set<unsigned long> > Alignment::get_genome_pos(unsigned int window_size) {
+
+    vector<set<unsigned long> > position_set_vec;
+    set<unsigned long> position_set;
+
+    unsigned long genome_pos = (window_size >= this->start) ? 0 : this->start - window_size;
+    unsigned int offset = (conf->window_size >= this->start )? this->start : conf->window_size;
+    
+    // add global chromosome offset
+    unsigned long pos_offset = genData->chr_size_cum.at(this->chr - 1);
+    genome_pos += pos_offset;
+
+    pair<unsigned int, unsigned char> chr_strand = make_pair(this->chr, this->strand);
+
+    // positions of preceding window
+    for (unsigned int k = 0; k < offset; k++) {
+        position_set.insert(genome_pos++);
+        if (conf->use_brkpts && genome_pos - pos_offset < genData->breakpoint_map[ chr_strand ].size() && genData->breakpoint_map[ chr_strand ].at(genome_pos - pos_offset)) {
+            position_set.clear();
+        }
+    }
+
+    // positions of genomic alignment segments
+    for (size_t i = 0; i < this->operations.size(); i++) {
+        if (this->operations.at(i) == 'M' || this->operations.at(i) == 'D' || (this->operations.at(i) == 'N'  && this->sizes.at(i) <= (2 * (int) conf->window_size))) {
+            for  (int j = 0; j < this->sizes.at(i); j++) {
+                position_set.insert(genome_pos++);
+                if (conf->use_brkpts && genome_pos - pos_offset < genData->breakpoint_map[ chr_strand ].size() && genData->breakpoint_map[ chr_strand ].at(genome_pos - pos_offset)) {
+                    position_set_vec.push_back(position_set);
+                    position_set.clear();
+                }
+            }
+        } else if (this->operations.at(i) == 'N') {
+            size_t pos2brkpt = 0;
+            for  (size_t j = 0; j < conf->window_size; j++) {
+                position_set.insert(genome_pos++);
+                pos2brkpt++;
+                if (conf->use_brkpts && genome_pos - pos_offset < genData->breakpoint_map[ chr_strand ].size() && genData->breakpoint_map[ chr_strand ].at(genome_pos - pos_offset)) {
+                    position_set_vec.push_back(position_set);
+                    position_set.clear();
+                    break;
+                }
+            }
+            genome_pos += (this->sizes.at(i) - conf->window_size - pos2brkpt);
+            if (position_set.size() > 0) {
+                position_set_vec.push_back(position_set);
+                position_set.clear();
+            }
+            for  (size_t j = 0; j < conf->window_size; j++) {
+                position_set.insert(genome_pos++);
+                if (conf->use_brkpts && genome_pos - pos_offset < genData->breakpoint_map[ chr_strand ].size() && genData->breakpoint_map[ chr_strand ].at(genome_pos - pos_offset)) {
+                    position_set.clear();
+                }
+            }
+        }
+    }
+
+    // positions of succeding window
+    for (unsigned int k = 0; k < window_size; k++) {
+        if ((genome_pos - pos_offset) < genData->coverage_map[ chr_strand ].size()) {
+            position_set.insert(genome_pos++);
+            if (conf->use_brkpts && (genome_pos - pos_offset) < genData->breakpoint_map[ chr_strand ].size() && genData->breakpoint_map[ chr_strand ].at(genome_pos - pos_offset)) {
+                position_set_vec.push_back(position_set);
+                position_set.clear();
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+
+    if (position_set.size() > 0)
+        position_set_vec.push_back(position_set);
+
+    return position_set_vec;
 }
 
 void Alignment::clear() {
