@@ -447,6 +447,10 @@ int main(int argc, char *argv[]) {
                     exit(1);
                 }
 
+                // check, if we need to parse annotation
+                if (conf->annotation.size() > 0)
+                    parse_annotation();
+
                 // check, if we need to prepare the mip objective
                 if (conf->use_mip_objective)
                     prepare_mip_objective();
@@ -459,6 +463,7 @@ int main(int argc, char *argv[]) {
             }
 
             genData->total_loss = 0.0;
+            genData->total_gain = 0.0;
             genData->num_altered = 0;
             genData->num_tested = 0;
 
@@ -470,7 +475,7 @@ int main(int argc, char *argv[]) {
             while ((ret = data->parse_file(infile, last_line, genData, counter, start_clock, start_time)) || data->left_reads.size() > 0 || data->right_reads.size() > 0) {
                 
                 // check if we use the first pass only to fill coverage map and infer zero predicted segments
-                if (iteration > 0 || !conf->zero_unpred) {
+                if (iteration > 0 || !(conf->zero_unpred)) {
                     if (conf->num_threads < 2) {
                         data->process_data_online(genData);
                     } else {
@@ -483,7 +488,7 @@ int main(int argc, char *argv[]) {
                 
                 if (!ret)
                     break;
-                else if (iteration > 0 || !conf->zero_unpred)
+                else if (iteration > 0 || !(conf->zero_unpred))
                     data = new OnlineData();
             }
 
@@ -509,12 +514,13 @@ int main(int argc, char *argv[]) {
                 fprintf(stdout, "\nsuccessfully parsed %i lines\n", counter - 1);
                 fprintf(stdout, "tested %i alignments\n", genData->num_tested);
                 fprintf(stdout, "changed %i alignments\n", genData->num_altered);
-                fprintf(stdout, "total objective: %f\n", (float) genData->total_loss);
+                fprintf(stdout, "total gain: %f\n", genData->total_gain);
+                fprintf(stdout, "total objective: %f\n", get_variance_global());
                 if (conf->use_mip_objective)
                     fprintf(stdout, "total objective (2): %f\n", (float) genData->segments.get_total_loss());
             }
 
-            if (genData->num_altered == 0 && iteration > 1) {
+            if ((genData->num_altered == 0) && (iteration > 0)) {
                 fprintf(stdout, "\nAs no alignment was altered in the last run - No more iterations!\n\n");
                 break;
             }
