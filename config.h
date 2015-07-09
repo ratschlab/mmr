@@ -54,8 +54,11 @@ class Config {
         bool use_mip_variance;
         bool strand_specific;
         bool zero_unpred;
+        bool burn_in;
         bool debug;
+        bool fast_mutex;
         bool take_non_secondary_only; 
+        bool use_brkpts;
         
         unsigned int window_size;
         unsigned int iterations;
@@ -73,6 +76,7 @@ class Config {
         string infile;
         string outfile;
         string segmentfile;
+        string annotation;
         string lossfile;
         string samtools;
 
