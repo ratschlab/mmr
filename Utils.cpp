@@ -274,7 +274,7 @@ string update_line_flag(char* line, bool is_best) {
         idx++;
     }
     delete sl;
-    return return_line.substr(1, return_line.size());
+    return return_line.substr(1, return_line.size() - 2);
 }
 
 
