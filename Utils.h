@@ -86,4 +86,6 @@ bool pair_is_valid(vector<Alignment>::iterator first, vector<Alignment>::iterato
 
 void parse_annotation();
 
+void check_sorted_input(); 
+
 #endif

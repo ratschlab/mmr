@@ -59,6 +59,7 @@ class Config {
         bool fast_mutex;
         bool take_non_secondary_only; 
         bool use_brkpts;
+        bool no_sort_check;
         
         unsigned int window_size;
         unsigned int iterations;

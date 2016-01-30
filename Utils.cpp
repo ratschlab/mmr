@@ -40,6 +40,7 @@
 #include "GeneralData.h"
 #include "config.h"
 #include "Utils.h" 
+#include "bam_sort.h"
 
 using namespace std;
 
@@ -909,3 +910,53 @@ void parse_annotation() {
         }
     }
 }
+
+void check_sorted_input() {
+
+    char line[10000];
+
+    FILE* infile = open_bam_pipe_in(conf->infile);
+
+    if (! infile) {
+        fprintf(stderr, "Could not open %s for reading!\n", conf->infile.c_str());
+        exit(1);
+    }
+    char* ret = fgets(line, 10000, infile);
+    unsigned int counter = 0;
+
+    if (!ret) {
+        fprintf(stderr, "Could not read SAM file %s\n", conf->infile.c_str());
+        exit(1);
+    }
+
+    if (conf->verbose)
+        fprintf(stdout, "\nChecking input file %s\n", conf->infile.c_str());
+
+    while (line[0] == '@')
+        ret = fgets(line, sizeof(line), infile);
+
+    char* sl = strtok(line, "\t");
+    string last_id = string(sl);
+
+    ret = fgets(line, sizeof(line), infile);
+    sl = strtok(line, "\t");
+
+    while(ret && (counter < 1000)) {
+        string curr_id = string(sl);
+        if (strnum_cmp(curr_id.c_str(), last_id.c_str()) < 0) {
+            fprintf(stderr, "ERROR: Input file %s seems unsorted:\n\n", conf->infile.c_str());
+            fprintf(stderr, "\t ID in record %i: %s\n\t ID in record %i: %s\n\n", counter+1, last_id.c_str(), counter+2, curr_id.c_str());
+            fprintf(stderr, "MMR expects input to be sorted by read ID. Please use\n\t samtools sort -n <bamfile>\nto sort your input.\n\n");
+            fprintf(stderr, "If your input is sorted by read ID but does not follow the samtools sort convention,\nyou can disable this check using --no-sort-check\n");
+
+            exit(1);
+        }
+        last_id = curr_id;
+        ret = fgets(line, sizeof(line), infile);
+        sl = strtok(line, "\t");
+        counter++;
+    }
+    if (conf->verbose) 
+        fprintf(stdout, "\tDone - File correctly sorted.\n");
+}
+

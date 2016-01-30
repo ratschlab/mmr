@@ -99,6 +99,8 @@ Config::Config(int argc, char *argv[]) {
             zero_unpred = true;
         } else if (!strcmp(argv[i], "-B") || !strcmp(argv[i], "--burn-in")) {
             burn_in = true;
+        } else if (!strcmp(argv[i], "--no-sort-check")) {
+            no_sort_check = true;
         } else if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "--segmentfile")) {
             segmentfile = std::string(argv[++i]);
         } else if (!strcmp(argv[i], "-l") || !strcmp(argv[i], "--lossfile")) {
@@ -130,6 +132,7 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-t --threads \t\tnumber of threads to use (must be > 2) [1]\n");
     fprintf(stderr, "\t-S --strand-specific \talignments are strand specific [off]\n");
     fprintf(stderr, "\t-C --init-secondary  \tchoose initial alignment also from secondary lines (flag 256) [off]\n");
+    fprintf(stderr, "\t   --no-sort-check  \tinput files are not checked to be sorted by read ID [off]\n");
     // Filter options
     fprintf(stderr, "\n\tInput file filtering:\n");
     fprintf(stderr, "\t-f --pre-filter-off \tswitch off pre filter for alignments that have F more edit ops than the best [on]\n");
@@ -237,6 +240,7 @@ void Config::init() {
     zero_unpred = false;
     use_brkpts = false;
     burn_in = false;
+    no_sort_check = false;
     samtools = "samtools";
     take_non_secondary_only = true;
 

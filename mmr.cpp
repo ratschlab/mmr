@@ -280,6 +280,10 @@ int main(int argc, char *argv[]) {
     if (conf->verbose)
         conf->print_call(argv[0]);
 
+    // check if input is properly sorted
+    if (!conf->no_sort_check)
+        check_sorted_input();
+
     if (conf->parse_complete) {
         BatchData* data = new BatchData();
         data->parse_file();
