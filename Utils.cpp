@@ -63,7 +63,7 @@ FILE* open_bam_pipe_in(std::string & in_fname)
 
 FILE* open_bam_pipe_out(std::string & out_fname)
 {
-	string command = conf->samtools + string(" view -bS -o ") + out_fname +  " - 2> /dev/null" + " && echo samtools for writing subprocess terminated successfully";
+	string command = conf->samtools + string(" view -bS -o ") + out_fname +  " - " + " && echo samtools for writing subprocess terminated successfully";
 	FILE* OUT_FP=NULL ;
 	fflush(stdin) ;
 	OUT_FP = popen(command.c_str(), "w") ;
