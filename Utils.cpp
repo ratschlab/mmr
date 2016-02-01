@@ -877,10 +877,12 @@ void parse_annotation() {
         long start = 0;
         long stop = 0;
         bool is_exon = false;
+        string chr_name;
 
         while (sl != NULL) {
             if (idx == 0) { // contig
-                chr = genData->chr_num[string(sl)];
+                chr_name = string(sl);
+                chr = genData->chr_num[chr_name];
                 if (chr == 0) {
                     fprintf(stderr, "\nERROR: The contig names in annotation file seem not to match the ones given in the alignment header. Could not find contig: %s\n", sl);
                     exit(2);
@@ -889,10 +891,10 @@ void parse_annotation() {
                 is_exon = strcmp("exon", sl) == 0;
                 if (!is_exon)
                     break;
-            } else if (idx == 3) { // start 
+            } else if (idx == 3) { // start - assumes 1 based inclusive intervals as defined by ensembl GTF
                 start = atoi(sl) - 1;
-            } else if (idx == 4) { // stop
-                stop = atoi(sl);
+            } else if (idx == 4) { // stop - assumes 1 based incusive intervals as defined by ensembl GTF
+                stop = atoi(sl) - 1;
             } else if (idx == 6 && conf->strand_specific) { // strand
                 strand = *sl;
             } else if (idx > 4) { // ignore rest
@@ -905,8 +907,21 @@ void parse_annotation() {
         // only care about exonic segments
         if (is_exon) {
             pair<unsigned int, unsigned char> chr_strand = pair<unsigned int, unsigned char>(chr, strand);
-            genData->breakpoint_map[chr_strand].at(start) = true;
-            genData->breakpoint_map[chr_strand].at(stop) = true;
+            if (genData->breakpoint_map.find(chr_strand) != genData->breakpoint_map.end()) {
+                // annotation exceeds contig in BAM
+                if (stop > (long) genData->breakpoint_map[chr_strand].size()) {
+                    fprintf(stderr, "WARNING: Segment end %li in contig %s provided in %s is outside the contig length provided in the alignment header (%lu).\n", stop, chr_name.c_str(), conf->annotation.c_str(), genData->breakpoint_map[chr_strand].size());
+                    fprintf(stderr, "\tIGNORING SEGMENT\n");
+                // probably just a +/- 1 interval convention error
+                } else if (stop == (long) genData->breakpoint_map[chr_strand].size()) {
+                    genData->breakpoint_map[chr_strand].at(start) = true;
+                    genData->breakpoint_map[chr_strand].at(stop - 1) = true;
+                // all fine
+                } else {
+                    genData->breakpoint_map[chr_strand].at(start) = true;
+                    genData->breakpoint_map[chr_strand].at(stop) = true;
+                }
+            }
         }
     }
 }
