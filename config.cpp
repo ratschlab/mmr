@@ -47,9 +47,11 @@ Config::Config(int argc, char *argv[]) {
     while (i < argc) {
         if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--verbose")) {
             verbose = true;
-        } else if (!strcmp(argv[i], "-b")) {
+        } else if (!strcmp(argv[i], "-b") || !strcmp(argv[i], "--best-only")) {
             print_best_only = true;
-        } else if (!strcmp(argv[i], "-V") || !strcmp(argv[i], "--use_variants")) {
+        } else if (!strcmp(argv[i], "-u") || !strcmp(argv[i], "--keep-unmapped")) {
+            print_unmapped = true;
+        } else if (!strcmp(argv[i], "-V") || !strcmp(argv[i], "--use-variants")) {
             use_variants = true;
         } else if (!strcmp(argv[i], "-C") || !strcmp(argv[i], "--init-secondary")) {
             take_non_secondary_only = false;
@@ -73,6 +75,8 @@ Config::Config(int argc, char *argv[]) {
             filter_distance = (unsigned char) atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-r") || !strcmp(argv[i], "--trim-id")) {
             trim_id = (unsigned char) atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "-R") || !strcmp(argv[i], "--read-len")) {
+            read_len = (unsigned char) atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-w") || !strcmp(argv[i], "--windowsize")) {
             window_size = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-a") || !strcmp(argv[i], "--annotation")) {
@@ -150,6 +154,7 @@ void Config::print_usage(std::string prog_name) {
     // Output Options
     fprintf(stderr, "\n\tOutput handling:\n");
     fprintf(stderr, "\t-b --best-only \t\tprint only best alignment [off]\n");
+    fprintf(stderr, "\t-u --keep-unmapped \tprint unmapped reads from input [off]\n");
     // options for variance optimization
     fprintf(stderr, "\n\tOptions for using the variance optimization:\n");
     fprintf(stderr, "\t-w --windowsize  [INT]\tsize of coverage window around read [20]\n");
@@ -161,7 +166,7 @@ void Config::print_usage(std::string prog_name) {
     fprintf(stderr, "\t-m --mitie-objective \tuse objective from MiTie instead of local variance [off]\n");
     fprintf(stderr, "\t-s --segmentfile \tMiTie segment file required for MiTie optimization []\n");
     fprintf(stderr, "\t-l --lossfile \t\tMiTie loss parameter file required for MiTie optimization []\n");
-    fprintf(stderr, "\t-r --read-len  [INT]\taverage length of the reads [75]\n");
+    fprintf(stderr, "\t-R --read-len  [INT]\taverage length of the reads [75]\n");
     fprintf(stderr, "\t-M --mitie-variance \tuse variance smoothing for regions with no MiTie prediction [off]\n");
     fprintf(stderr, "\t-z --zero-expect-unpred \tinitializes all covered but not predicted positions with expectation 0.0 [off]\n");
     // General options
@@ -192,6 +197,7 @@ void Config::print_call(std::string prog_name) {
     if (trim_id > 0)
         fprintf(stdout, "\t trim read id by:      %i\n", trim_id);
     fprintf(stdout, "\t print best only:      %s\n", print_best_only?"on":"off");
+    fprintf(stdout, "\t print unmapped:       %s\n", print_unmapped?"on":"off");
     fprintf(stdout, "\t iterations:           %i\n", iterations);
     fprintf(stdout, "\t 1 iteration burn in:  %s\n", burn_in?"on":"off");
     if (use_brkpts) 
@@ -213,6 +219,7 @@ void Config::print_call(std::string prog_name) {
 void Config::init() {
     verbose = false;
     print_best_only = false;
+    print_unmapped = false;
     use_pair_info = false;
     pre_filter = true;
     parse_complete = false;

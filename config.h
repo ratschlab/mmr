@@ -46,6 +46,7 @@ class Config {
 
         bool verbose;
         bool print_best_only;
+        bool print_unmapped;
         bool use_pair_info;
         bool use_variants;
         bool pre_filter;

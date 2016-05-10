@@ -124,7 +124,7 @@ void write_output_direct() {
         if (id.size() == 0) {
             continue ;
         }
-        if (unmapped && !conf->print_best_only) {
+        if (unmapped && conf->print_unmapped) {
             fprintf(outfile, "%s\n", cp_line);
             output_counter++;
             continue;
