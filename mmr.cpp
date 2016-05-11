@@ -121,13 +121,13 @@ void write_output_direct() {
         sl = strtok(line, "\t");
         id = curr_alignment->fill(sl, pair_info, unmapped);
         delete curr_alignment;
-        if (id.size() == 0) {
-            continue ;
-        }
         if (unmapped && conf->print_unmapped) {
             fprintf(outfile, "%s\n", cp_line);
             output_counter++;
             continue;
+        }
+        if (id.size() == 0) {
+            continue ;
         }
     
         if (pair_info == 0) {
