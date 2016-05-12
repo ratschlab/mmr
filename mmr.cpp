@@ -164,6 +164,7 @@ void write_output_direct() {
             }
         }
     }
+    fflush(outfile);
     fclose(outfile);
     fclose(infile);
 
