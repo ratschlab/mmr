@@ -122,7 +122,7 @@ void write_output_direct() {
         id = curr_alignment->fill(sl, pair_info, unmapped);
         delete curr_alignment;
         if (unmapped && conf->print_unmapped) {
-            fprintf(outfile, "%s\n", cp_line);
+            fprintf(outfile, "%s", cp_line);
             output_counter++;
             continue;
         }
