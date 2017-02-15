@@ -246,7 +246,7 @@ void OnlineData::process_data_online(GeneralData* genData) {
             if (!conf->fast_mutex)
                 pthread_mutex_lock(&mutex_coverage);
             // check if lv_idx < curr_best
-            if (compare_single(*lv_idx, *curr_best, loss, gain)) { //, (this->last_id).compare(string("1_270569_270618")) == 0)) {
+            if (compare_single(*lv_idx, *curr_best, loss, gain)) {
                 total_gain += gain;
                 //double obj_bef = get_variance_global();
                 //fprintf(stdout, "is left\ntotal objective (before): %f\n", obj_bef);
@@ -333,7 +333,7 @@ void OnlineData::process_data_online(GeneralData* genData) {
             if (!conf->fast_mutex)
                 pthread_mutex_lock(&mutex_coverage);
             // check if rv_idx < curr_best
-            if (compare_single(*rv_idx, *curr_best, loss, gain)) { //, (this->last_id).compare(string("1_270569_270618")))) {
+            if (compare_single(*rv_idx, *curr_best, loss, gain)) { 
                 total_gain += gain;
                 //double obj_bef = get_variance_global();
                 //fprintf(stdout, "is right\ntotal objective (before): %f\n", obj_bef);
